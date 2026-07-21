@@ -1,0 +1,54 @@
+---
+name: Validate
+
+'on':
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        # actions/checkout v4.2.2
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Run application and delivery tests
+        run: |
+          set -euo pipefail
+          npm test
+          npm run format:check
+          bash test/container.test.sh
+          bash test/update-gitops-digest.test.sh
+
+      - name: Build and test the pinned container
+        run: |
+          set -euo pipefail
+          docker build --tag servitium:test .
+          docker run --rm --read-only --cap-drop=ALL \
+            --security-opt=no-new-privileges \
+            --volume "$PWD/test:/app/test:ro" \
+            --entrypoint node servitium:test \
+            --test /app/test/server.test.js
+
+      - name: Download pinned gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: >-
+            551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          set -euo pipefail
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl --fail --silent --show-error --location \
+            --output "$archive" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  ${archive}" | sha256sum --check --strict
+          tar -xzf "$archive" gitleaks
+          ./gitleaks git --redact --verbose
