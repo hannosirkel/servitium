@@ -134,5 +134,5 @@ jobs:
           git add kustomization.yaml
           git diff --cached --check
           git commit -m "deploy: servitium ${IMAGE_DIGEST}"
-          git -c "http.extraHeader=Authorization: Bearer ${APP_TOKEN}" \
-            push origin HEAD:main
+          git push "https://x-access-token:${APP_TOKEN}@github.com/hannosirkel/servitium-main.git" \
+            HEAD:main
