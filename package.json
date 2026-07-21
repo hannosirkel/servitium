@@ -1,0 +1,14 @@
+{
+  "name": "servitium",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The Servitium community service",
+  "engines": {
+    "node": ">=24.18.0"
+  },
+  "scripts": {
+    "format:check": "node --check src/server.js && node --check test/server.test.js",
+    "start": "node src/server.js",
+    "test": "node --test"
+  }
+}
