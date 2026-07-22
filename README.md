@@ -3,7 +3,8 @@
 A small Node.js service for the community sandbox. It listens on port `8099`
 by default and exposes:
 
-- `GET /` — hello response
+- `GET /` — full-screen fantasy artwork
+- `GET /assets/fantasy-overlord.png` — generated hero artwork
 - `GET /healthz` — readiness and liveness response
 
 Run locally:
