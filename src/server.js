@@ -1,6 +1,31 @@
 'use strict';
 
 const http = require('node:http');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const heroImage = fs.readFileSync(path.join(__dirname, 'assets', 'fantasy-overlord.png'));
+
+const homePage = `<!doctype html>
+<html lang="et">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Servitium</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; background: #080b0d; }
+    main { width: 100%; height: 100%; overflow: hidden; }
+    img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: center; }
+  </style>
+</head>
+<body>
+  <main>
+    <img src="/assets/fantasy-overlord.png" alt="Musta raudrüüga fantaasiavalitseja vaatab süngele mägilinnale">
+  </main>
+</body>
+</html>
+`;
 
 function sendJson(response, statusCode, value) {
   const body = `${JSON.stringify(value)}\n`;
@@ -12,13 +37,24 @@ function sendJson(response, statusCode, value) {
   response.end(body);
 }
 
+function send(response, statusCode, contentType, body, cacheControl = 'no-store') {
+  response.writeHead(statusCode, {
+    'content-type': contentType,
+    'content-length': Buffer.byteLength(body),
+    'cache-control': cacheControl,
+  });
+  response.end(body);
+}
+
 function createServer() {
   return http.createServer((request, response) => {
     if (request.method === 'GET' && request.url === '/') {
-      sendJson(response, 200, {
-        service: 'servitium',
-        message: 'Hello from Servitium!',
-      });
+      send(response, 200, 'text/html; charset=utf-8', homePage);
+      return;
+    }
+
+    if (request.method === 'GET' && request.url === '/assets/fantasy-overlord.png') {
+      send(response, 200, 'image/png', heroImage, 'public, max-age=31536000, immutable');
       return;
     }
 

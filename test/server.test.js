@@ -26,14 +26,23 @@ after(async () => {
   }
 });
 
-test('GET / returns the Servitium greeting', async () => {
+test('GET / returns the Servitium image page', async () => {
   const response = await fetch(`${baseUrl}/`);
   assert.equal(response.status, 200);
-  assert.match(response.headers.get('content-type'), /^application\/json/);
-  assert.deepEqual(await response.json(), {
-    service: 'servitium',
-    message: 'Hello from Servitium!',
-  });
+  assert.match(response.headers.get('content-type'), /^text\/html/);
+  const body = await response.text();
+  assert.match(body, /<title>Servitium<\/title>/);
+  assert.match(body, /src="\/assets\/fantasy-overlord\.png"/);
+  assert.match(body, /alt="[^"]+"/);
+});
+
+test('GET /assets/fantasy-overlord.png returns the hero image', async () => {
+  const response = await fetch(`${baseUrl}/assets/fantasy-overlord.png`);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-type'), 'image/png');
+  assert.equal(response.headers.get('cache-control'), 'public, max-age=31536000, immutable');
+  const body = new Uint8Array(await response.arrayBuffer());
+  assert.deepEqual(Array.from(body.subarray(0, 8)), [137, 80, 78, 71, 13, 10, 26, 10]);
 });
 
 test('GET /healthz reports readiness', async () => {
