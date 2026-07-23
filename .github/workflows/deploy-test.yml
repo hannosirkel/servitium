@@ -73,7 +73,7 @@ jobs:
           trap 'rm -f -- "$guard"' EXIT
           jq -er '.content | gsub("\\n"; "")' <<<"$guard_response" \
             | base64 --decode >"$guard"
-          grep -qx '#!/usr/bin/env bash' "$guard"
+          grep -qx '#!/bin/sh' "$guard"
           guard_content="$(base64 --wrap=0 "$guard")"
 
           for _ in $(seq 1 30); do

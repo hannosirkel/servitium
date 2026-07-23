@@ -63,6 +63,7 @@ test('test promotion receives the digest guard from the trusted gate', () => {
   const promote = source.split(/^  promote:/m)[1];
   assert.match(gate, /github\.event\.pull_request\.base\.sha/);
   assert.match(gate, /contents\/scripts\/update-gitops-digest\.sh/);
+  assert.match(gate, /grep -qx '#!\/bin\/sh'/);
   assert.match(promote, /needs\.gate\.outputs\.guard/);
   assert.doesNotMatch(build, /guard/);
   assert.doesNotMatch(promote, /needs\.build\.outputs\.guard/);
