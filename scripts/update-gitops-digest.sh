@@ -2,13 +2,12 @@
 set -eu
 
 if [ "$#" -ne 2 ]; then
-  echo 'usage: update-gitops-digest.sh sha256:DIGEST CHECKOUT' >&2
+  echo 'usage: update-gitops-digest.sh sha256:DIGEST OVERLAY_DIRECTORY' >&2
   exit 2
 fi
 
 digest="$1"
-checkout="$2"
-kustomization="$checkout/kustomization.yaml"
+overlay_input="$2"
 
 case "$digest" in
   sha256:????????????????????????????????????????????????????????????????) ;;
@@ -21,11 +20,37 @@ if ! printf '%s' "$digest" | grep -Eq '^sha256:[0-9a-f]{64}$'; then
   echo 'digest update rejected: malformed digest' >&2
   exit 1
 fi
+
+if ! overlay="$(CDPATH= cd "$overlay_input" && pwd -P)"; then
+  echo 'digest update rejected: overlay is unavailable' >&2
+  exit 1
+fi
+if ! repository="$(git -C "$overlay" rev-parse --show-toplevel 2>/dev/null)"; then
+  echo 'digest update rejected: overlay is not in a Git worktree' >&2
+  exit 1
+fi
+repository="$(CDPATH= cd "$repository" && pwd -P)"
+case "$overlay" in
+  "$repository"/*) relative_overlay="${overlay#"$repository"/}" ;;
+  *)
+    echo 'digest update rejected: overlay is outside its Git worktree' >&2
+    exit 1
+    ;;
+esac
+case "$relative_overlay" in
+  overlays/live|overlays/test) ;;
+  *)
+    echo 'digest update rejected: overlay is not permitted' >&2
+    exit 1
+    ;;
+esac
+
+kustomization="$overlay/kustomization.yaml"
 if [ ! -f "$kustomization" ] || [ -L "$kustomization" ]; then
   echo 'digest update rejected: kustomization is unavailable' >&2
   exit 1
 fi
-if [ -n "$(git -C "$checkout" status --porcelain)" ]; then
+if [ -n "$(git -C "$repository" status --porcelain)" ]; then
   echo 'digest update rejected: checkout is not clean' >&2
   exit 1
 fi
@@ -53,19 +78,22 @@ const replacement = matches[0][0].replace(
 fs.writeFileSync(file, input.replace(imageBlock, replacement));
 NODE
 
-git -C "$checkout" diff --check
-
-if [ "$(git -C "$checkout" diff --name-only)" != 'kustomization.yaml' ]; then
+changed="$(git -C "$repository" diff --name-only)"
+if [ "$changed" != "$relative_overlay/kustomization.yaml" ]; then
   echo 'digest update rejected: unexpected changed file' >&2
   exit 1
 fi
-if [ "$(git -C "$checkout" diff --numstat)" != "1	1	kustomization.yaml" ]; then
+
+git -C "$repository" diff --check
+
+expected_numstat="$(printf '1\t1\t%s/kustomization.yaml' "$relative_overlay")"
+if [ "$(git -C "$repository" diff --numstat)" != "$expected_numstat" ]; then
   echo 'digest update rejected: unexpected diff size' >&2
   exit 1
 fi
 
 changed_lines="$(
-  git -C "$checkout" diff --unified=0 -- kustomization.yaml \
+  git -C "$repository" diff --unified=0 -- "$relative_overlay/kustomization.yaml" \
     | grep -E '^[+-]' | grep -Ev '^(---|\+\+\+)' || true
 )"
 if [ "$(printf '%s\n' "$changed_lines" | grep -c .)" -ne 2 ]; then
