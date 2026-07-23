@@ -13,6 +13,10 @@ inode_of() {
   node -e 'process.stdout.write(String(require("node:fs").statSync(process.argv[1]).ino))' "$1"
 }
 
+metadata_of() {
+  node -e 'const stat = require("node:fs").statSync(process.argv[1]); process.stdout.write(`${stat.mode & 0o7777}:${stat.uid}:${stat.gid}`)' "$1"
+}
+
 write_kustomization() {
   local directory="$1"
   local digest_lines="${2:-1}"
@@ -44,6 +48,8 @@ write_fixture() {
 
 valid="$test_root/valid"
 write_fixture "$valid"
+chmod 640 "$valid/overlays/test/kustomization.yaml"
+valid_metadata="$(metadata_of "$valid/overlays/test/kustomization.yaml")"
 "$helper" "$new_digest" "$valid/overlays/test"
 [[ "$(git -C "$valid" diff --name-only)" == 'overlays/test/kustomization.yaml' ]]
 [[ "$(git -C "$valid" diff --numstat)" == $'1\t1\toverlays/test/kustomization.yaml' ]]
@@ -51,6 +57,30 @@ write_fixture "$valid"
 [[ "$(grep -c "digest: $old_digest" "$valid/overlays/live/kustomization.yaml")" -eq 1 ]]
 [[ "$(git -C "$valid" diff --unified=0 | grep -c "^-    digest: $old_digest")" -eq 1 ]]
 [[ "$(git -C "$valid" diff --unified=0 | grep -c "^+    digest: $new_digest")" -eq 1 ]]
+[[ "$(metadata_of "$valid/overlays/test/kustomization.yaml")" == "$valid_metadata" ]]
+
+race="$test_root/race"
+write_fixture "$race"
+race_bin="$test_root/race-bin"
+mkdir "$race_bin"
+real_node="$(command -v node)"
+printf '%s\n' \
+  '#!/bin/sh' \
+  'if [ "${1:-}" = "-" ]; then' \
+  '  "$GITOPS_REAL_NODE" -e "const fs = require(\"node:fs\"); const file = process.argv[1]; fs.writeFileSync(file, fs.readFileSync(file, \"utf8\").replace(\"deployment.yaml\", \"deployment-race.yaml\"))" "$GITOPS_TEST_TARGET"' \
+  'fi' \
+  'exec "$GITOPS_REAL_NODE" "$@"' >"$race_bin/node"
+chmod +x "$race_bin/node"
+if PATH="$race_bin:$PATH" GITOPS_REAL_NODE="$real_node" \
+  GITOPS_TEST_TARGET="$race/overlays/test/kustomization.yaml" \
+  "$helper" "$new_digest" "$race/overlays/test" >/dev/null 2>&1; then
+  echo 'same-target race unexpectedly accepted' >&2
+  exit 1
+fi
+if ! grep -q 'deployment-race.yaml' "$race/overlays/test/kustomization.yaml"; then
+  echo 'same-target race edit was overwritten' >&2
+  exit 1
+fi
 
 root="$test_root/root"
 write_fixture "$root"
