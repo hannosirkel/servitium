@@ -1,6 +1,8 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const { after, before, test } = require('node:test');
 
 const { createServer } = require('../src/server');
@@ -43,6 +45,23 @@ test('GET /assets/fantasy-overlord.png returns the hero image', async () => {
   assert.equal(response.headers.get('cache-control'), 'public, max-age=31536000, immutable');
   const body = new Uint8Array(await response.arrayBuffer());
   assert.deepEqual(Array.from(body.subarray(0, 8)), [137, 80, 78, 71, 13, 10, 26, 10]);
+});
+
+test('GET /dice redirects to the canonical trailing-slash path', async () => {
+  const response = await fetch(`${baseUrl}/dice`, { redirect: 'manual' });
+  assert.equal(response.status, 308);
+  assert.equal(response.headers.get('location'), '/dice/');
+});
+
+test('GET /dice/ serves the built frontend with subpath assets', {
+  skip: !fs.existsSync(path.join(__dirname, '..', 'dist', 'dice', 'index.html')),
+}, async () => {
+  const response = await fetch(`${baseUrl}/dice/`);
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('content-type'), /^text\/html/);
+  const body = await response.text();
+  assert.match(body, /Dice Hall/);
+  assert.match(body, /\/dice\/assets\//);
 });
 
 test('GET /healthz reports readiness', async () => {

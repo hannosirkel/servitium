@@ -5,6 +5,16 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const heroImage = fs.readFileSync(path.join(__dirname, 'assets', 'fantasy-overlord.png'));
+const diceRoot = path.join(__dirname, '..', 'dist', 'dice');
+const mimeTypes = {
+  '.css': 'text/css; charset=utf-8',
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.png': 'image/png',
+  '.wasm': 'application/wasm',
+  '.jpg': 'image/jpeg',
+};
 
 const homePage = `<!doctype html>
 <html lang="et">
@@ -56,6 +66,26 @@ function createServer() {
     if (request.method === 'GET' && request.url === '/assets/fantasy-overlord.png') {
       send(response, 200, 'image/png', heroImage, 'public, max-age=31536000, immutable');
       return;
+    }
+
+    if (request.method === 'GET' && request.url === '/dice') {
+      response.writeHead(308, { location: '/dice/' });
+      response.end();
+      return;
+    }
+
+    if (request.method === 'GET' && request.url.startsWith('/dice/')) {
+      const relativePath = request.url === '/dice/'
+        ? 'index.html'
+        : decodeURIComponent(request.url.slice('/dice/'.length).split('?')[0]);
+      const filePath = path.resolve(diceRoot, relativePath);
+      if (filePath.startsWith(`${diceRoot}${path.sep}`) && fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+        const body = fs.readFileSync(filePath);
+        const immutable = relativePath !== 'index.html';
+        send(response, 200, mimeTypes[path.extname(filePath)] || 'application/octet-stream', body,
+          immutable ? 'public, max-age=31536000, immutable' : 'no-cache');
+        return;
+      }
     }
 
     if (request.method === 'GET' && request.url === '/healthz') {

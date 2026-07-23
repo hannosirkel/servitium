@@ -7,8 +7,28 @@
     "node": ">=24.18.0"
   },
   "scripts": {
+    "build": "vite build",
+    "dev": "vite",
     "format:check": "node --check src/server.js && node --check test/server.test.js && node --check test/workflows.test.js",
+    "typecheck": "tsc --noEmit",
     "start": "node src/server.js",
-    "test": "node --test"
+    "test": "node --test test/*.test.js",
+    "test:unit": "vitest run"
+  },
+  "dependencies": {
+    "@3d-dice/dice-box": "^1.1.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "jsdom": "^29.1.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
   }
 }
