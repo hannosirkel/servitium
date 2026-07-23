@@ -86,3 +86,29 @@ test('live release updates only the live overlay', () => {
   assert.match(source, /overlays\/live/);
   assert.doesNotMatch(source, /overlays\/test/);
 });
+
+test('Discord notifications are read-only and limited to authoritative events', () => {
+  const source = workflow('notify.yml');
+  assert.match(source, /pull_request_target:\n    branches:\n      - main\n    types: \[closed\]/);
+  assert.match(source, /workflow_run:\n    workflows: \[Release\]\n    branches:\n      - main\n    types: \[completed\]/);
+  assert.match(source, /github\.event\.pull_request\.merged == true/);
+  assert.match(source, /github\.event\.workflow_run\.name == 'Release'/);
+  assert.match(source, /permissions:\n  actions: read\n  contents: read/);
+  assert.doesNotMatch(source, /uses:|checkout|artifact|cache|packages: write|contents: write/);
+  assert.doesNotMatch(source, /Deploy Test|\/logs/);
+});
+
+test('Discord notifications bound failure details and restrict mentions', () => {
+  const source = workflow('notify.yml');
+  assert.match(source, /DISCORD_CICD_WEBHOOK_URL/);
+  assert.match(source, /jobs\?per_page=100/);
+  assert.match(source, /\[0:900\]/);
+  assert.match(source, /1485190637644025926/);
+  assert.match(source, /allowed_mentions/);
+  assert.match(source, /"parse":\[\]/);
+  assert.match(source, /"users":\["1485190637644025926"\]/);
+  assert.match(source, /--fail-with-body/);
+  assert.match(source, /--connect-timeout 10/);
+  assert.match(source, /--max-time 30/);
+  assert.match(source, /--retry 3/);
+});
