@@ -69,15 +69,67 @@ if ! cp -p "$kustomization" "$original"; then
   echo 'digest update rejected: could not snapshot kustomization' >&2
   exit 1
 fi
+verification="$original.verify"
+if ! cp -p "$original" "$verification"; then
+  rm -f "$original" "$verification"
+  echo 'digest update rejected: could not verify kustomization snapshot' >&2
+  exit 1
+fi
+if ! snapshot_hash="$(node -e 'const crypto = require("node:crypto"); const fs = require("node:fs"); process.stdout.write(crypto.createHash("sha256").update(fs.readFileSync(process.argv[1])).digest("hex"))' "$verification")"; then
+  rm -f "$original" "$verification"
+  echo 'digest update rejected: could not hash kustomization snapshot' >&2
+  exit 1
+fi
 restore_needed=1
+preserve_recovery_snapshot() {
+  if [ -f "$original" ] && [ ! -L "$original" ]; then
+    recovery_snapshot="$original"
+  else
+    recovery_snapshot="$verification"
+  fi
+  echo "digest update rejected: recovery snapshot preserved: $recovery_snapshot" >&2
+}
+restore_kustomization() {
+  if [ -d "$kustomization" ]; then
+    preserve_recovery_snapshot
+    return 1
+  fi
+  if ! mv -f "$original" "$kustomization"; then
+    preserve_recovery_snapshot
+    return 1
+  fi
+  if [ -d "$kustomization" ] || [ ! -f "$kustomization" ] || [ -L "$kustomization" ]; then
+    preserve_recovery_snapshot
+    return 1
+  fi
+  if ! restored_link_count="$(node -e 'process.stdout.write(String(require("node:fs").statSync(process.argv[1]).nlink))' "$kustomization")"; then
+    preserve_recovery_snapshot
+    return 1
+  fi
+  if [ "$restored_link_count" -ne 1 ]; then
+    preserve_recovery_snapshot
+    return 1
+  fi
+  if ! restored_hash="$(node -e 'const crypto = require("node:crypto"); const fs = require("node:fs"); process.stdout.write(crypto.createHash("sha256").update(fs.readFileSync(process.argv[1])).digest("hex"))' "$kustomization")"; then
+    preserve_recovery_snapshot
+    return 1
+  fi
+  if [ "$restored_hash" != "$snapshot_hash" ]; then
+    preserve_recovery_snapshot
+    return 1
+  fi
+  rm -f "$verification" || true
+}
 cleanup() {
   status="$?"
   if [ "$restore_needed" -eq 1 ]; then
-    if ! mv -f "$original" "$kustomization"; then
+    if ! restore_kustomization; then
       status=1
     fi
   fi
-  rm -f "$original" || true
+  if [ "$restore_needed" -eq 0 ]; then
+    rm -f "$original" "$verification" || true
+  fi
   trap - EXIT HUP INT TERM
   exit "$status"
 }
@@ -138,5 +190,5 @@ if [ "$(grep -c "^    digest: $digest$" "$kustomization")" -ne 1 ]; then
 fi
 
 restore_needed=0
-rm -f "$original" || true
+rm -f "$original" "$verification" || true
 trap - EXIT HUP INT TERM

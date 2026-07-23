@@ -170,4 +170,44 @@ if [[ "$(cat "$rollback/sentinel.txt")" != 'concurrent mutation' ]]; then
   exit 1
 fi
 
+directory_replacement="$test_root/directory-replacement"
+write_fixture "$directory_replacement"
+directory_test_bin="$test_root/directory-test-bin"
+mkdir "$directory_test_bin"
+printf '%s\n' \
+  '#!/bin/sh' \
+  'if [ "${1:-}" = "-C" ] && [ "${3:-}" = "diff" ] && [ "${4:-}" = "--name-only" ]; then' \
+  '  rm -f "$GITOPS_TEST_TARGET"' \
+  '  mkdir "$GITOPS_TEST_TARGET"' \
+  'fi' \
+  'exec "$GITOPS_REAL_GIT" "$@"' >"$directory_test_bin/git"
+chmod +x "$directory_test_bin/git"
+directory_output="$test_root/directory-replacement-output.txt"
+if PATH="$directory_test_bin:$PATH" GITOPS_REAL_GIT="$(command -v git)" \
+  GITOPS_TEST_TARGET="$directory_replacement/overlays/test/kustomization.yaml" \
+  "$helper" "$new_digest" "$directory_replacement/overlays/test" \
+  >"$directory_output" 2>&1; then
+  echo 'target-directory replacement unexpectedly accepted' >&2
+  exit 1
+fi
+if [[ ! -d "$directory_replacement/overlays/test/kustomization.yaml" ]]; then
+  echo 'target-directory replacement was overwritten' >&2
+  exit 1
+fi
+shopt -s nullglob
+recovery_snapshots=("$directory_replacement/overlays/test"/.update-gitops-digest.*)
+shopt -u nullglob
+if [[ "${#recovery_snapshots[@]}" -eq 0 ]]; then
+  echo 'target-directory failure did not preserve a recovery snapshot' >&2
+  exit 1
+fi
+if ! grep -l "digest: $old_digest" "${recovery_snapshots[@]}" >/dev/null; then
+  echo 'recovery snapshot does not contain the original digest' >&2
+  exit 1
+fi
+if ! grep -q 'recovery snapshot preserved:' "$directory_output"; then
+  echo 'target-directory failure did not report recovery snapshot' >&2
+  exit 1
+fi
+
 echo 'digest update guard tests passed'
