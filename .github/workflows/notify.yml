@@ -1,0 +1,155 @@
+---
+name: Notify Discord
+
+'on':
+  pull_request_target:
+    branches:
+      - main
+    types: [closed]
+  workflow_run:
+    workflows: [Release]
+    branches:
+      - main
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  merged-pr:
+    if: >-
+      github.event_name == 'pull_request_target' &&
+      github.event.pull_request.merged == true
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Report merged pull request
+        env:
+          DISCORD_CICD_WEBHOOK_URL: ${{ secrets.DISCORD_CICD_WEBHOOK_URL }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$PR_NUMBER" | grep -Eq '^[1-9][0-9]*$'
+          payload="$(jq -cn \
+            --arg author "$PR_AUTHOR" \
+            --arg number "$PR_NUMBER" \
+            --arg title "$PR_TITLE" \
+            --arg url "$PR_URL" '
+            {
+              "allowed_mentions": {"parse":[]},
+              "embeds": [{
+                "title": ("Servitium PR #" + $number + " merged"),
+                "description": (($title[0:300]) + "\nby `" + ($author[0:100]) + "`"),
+                "url": $url,
+                "color": 5793266
+              }]
+            }
+          ')"
+          curl --fail-with-body --silent --show-error \
+            --connect-timeout 10 --max-time 30 \
+            --retry 3 --retry-all-errors \
+            --header 'Content-Type: application/json' \
+            --data "$payload" \
+            "$DISCORD_CICD_WEBHOOK_URL"
+
+  live-release:
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.name == 'Release'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Report live release result
+        env:
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          DISCORD_CICD_WEBHOOK_URL: ${{ secrets.DISCORD_CICD_WEBHOOK_URL }}
+          GITHUB_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$RUN_ID" | grep -Eq '^[1-9][0-9]*$'
+          printf '%s' "$HEAD_SHA" | grep -Eq '^[0-9a-f]{40}$'
+
+          if [ "$CONCLUSION" = success ]; then
+            payload="$(jq -cn \
+              --arg sha "$HEAD_SHA" \
+              --arg url "$RUN_URL" '
+              {
+                "allowed_mentions": {"parse":[]},
+                "embeds": [{
+                  "title": "Servitium live image published",
+                  "description": ("Source `" + $sha + "`"),
+                  "url": $url,
+                  "color": 5793266
+                }]
+              }
+            ')"
+          else
+            jobs="$(curl --fail-with-body --silent --show-error \
+              --connect-timeout 10 --max-time 30 \
+              --retry 3 --retry-all-errors \
+              --header "Authorization: Bearer $GITHUB_TOKEN" \
+              --header 'Accept: application/vnd.github+json' \
+              --header 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/${REPOSITORY}/actions/runs/${RUN_ID}/jobs?per_page=100")"
+            cause="$(jq -r '
+              [
+                .jobs[] |
+                . as $job |
+                ([.steps[]? |
+                  select(
+                    .conclusion == "failure" or
+                    .conclusion == "cancelled" or
+                    .conclusion == "timed_out" or
+                    .conclusion == "action_required"
+                  ) |
+                  .name
+                ] | unique) as $steps |
+                select(
+                  ($job.conclusion != "success" and $job.conclusion != "skipped") or
+                  ($steps | length) > 0
+                ) |
+                if ($steps | length) > 0 then
+                  ($job.name + ": " + ($steps | join(", ")))
+                else
+                  ($job.name + ": " + ($job.conclusion // "unknown"))
+                end
+              ] |
+              join("\n") |
+              .[0:900]
+            ' <<<"$jobs")"
+            if [ -z "$cause" ]; then
+              cause="Workflow conclusion: ${CONCLUSION}"
+            fi
+            payload="$(jq -cn \
+              --arg cause "$cause" \
+              --arg conclusion "$CONCLUSION" \
+              --arg sha "$HEAD_SHA" \
+              --arg url "$RUN_URL" '
+              {
+                "content": "<@1485190637644025926>",
+                "allowed_mentions": {"users":["1485190637644025926"]},
+                "embeds": [{
+                  "title": "Servitium live release failed",
+                  "description": (
+                    "Conclusion: `" + ($conclusion[0:100]) +
+                    "`\nSource: `" + $sha + "`\n" + $cause
+                  ),
+                  "url": $url,
+                  "color": 15548997
+                }]
+              }
+            ')"
+          fi
+
+          curl --fail-with-body --silent --show-error \
+            --connect-timeout 10 --max-time 30 \
+            --retry 3 --retry-all-errors \
+            --header 'Content-Type: application/json' \
+            --data "$payload" \
+            "$DISCORD_CICD_WEBHOOK_URL"

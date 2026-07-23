@@ -4,6 +4,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 
+// Load the immutable hero asset once during process startup.
 const heroImage = fs.readFileSync(path.join(__dirname, 'assets', 'fantasy-overlord.png'));
 const diceRoot = path.join(__dirname, '..', 'dist', 'dice');
 const mimeTypes = {

@@ -2,13 +2,16 @@
 set -eu
 
 if [ "$#" -ne 2 ]; then
-  echo 'usage: update-gitops-digest.sh sha256:DIGEST CHECKOUT' >&2
+  echo 'usage: update-gitops-digest.sh sha256:DIGEST OVERLAY_DIRECTORY' >&2
   exit 2
 fi
 
 digest="$1"
-checkout="$2"
-kustomization="$checkout/kustomization.yaml"
+overlay_input="$2"
+candidate=''
+original=''
+verification=''
+restore_needed=0
 
 case "$digest" in
   sha256:????????????????????????????????????????????????????????????????) ;;
@@ -21,20 +24,169 @@ if ! printf '%s' "$digest" | grep -Eq '^sha256:[0-9a-f]{64}$'; then
   echo 'digest update rejected: malformed digest' >&2
   exit 1
 fi
+
+if ! overlay="$(CDPATH= cd "$overlay_input" && pwd -P)"; then
+  echo 'digest update rejected: overlay is unavailable' >&2
+  exit 1
+fi
+if ! repository="$(git -C "$overlay" rev-parse --show-toplevel 2>/dev/null)"; then
+  echo 'digest update rejected: overlay is not in a Git worktree' >&2
+  exit 1
+fi
+repository="$(CDPATH= cd "$repository" && pwd -P)"
+case "$overlay" in
+  "$repository"/*) relative_overlay="${overlay#"$repository"/}" ;;
+  *)
+    echo 'digest update rejected: overlay is outside its Git worktree' >&2
+    exit 1
+    ;;
+esac
+case "$relative_overlay" in
+  overlays/live|overlays/test) ;;
+  *)
+    echo 'digest update rejected: overlay is not permitted' >&2
+    exit 1
+    ;;
+esac
+
+kustomization="$overlay/kustomization.yaml"
 if [ ! -f "$kustomization" ] || [ -L "$kustomization" ]; then
   echo 'digest update rejected: kustomization is unavailable' >&2
   exit 1
 fi
-if [ -n "$(git -C "$checkout" status --porcelain)" ]; then
+if ! link_count="$(node -e 'process.stdout.write(String(require("node:fs").statSync(process.argv[1]).nlink))' "$kustomization")"; then
+  echo 'digest update rejected: kustomization link count is unavailable' >&2
+  exit 1
+fi
+if [ "$link_count" -ne 1 ]; then
+  echo 'digest update rejected: kustomization must not be hard-linked' >&2
+  exit 1
+fi
+if [ -n "$(git -C "$repository" status --porcelain)" ]; then
   echo 'digest update rejected: checkout is not clean' >&2
   exit 1
 fi
 
-node - "$kustomization" "$digest" <<'NODE'
+original="$(mktemp "$overlay/.update-gitops-digest.XXXXXX")"
+if ! cp -p "$kustomization" "$original"; then
+  rm -f "$original"
+  echo 'digest update rejected: could not snapshot kustomization' >&2
+  exit 1
+fi
+verification="$original.verify"
+if ! cp -p "$original" "$verification"; then
+  rm -f "$original" "$verification"
+  echo 'digest update rejected: could not verify kustomization snapshot' >&2
+  exit 1
+fi
+if ! snapshot_hash="$(node -e 'const crypto = require("node:crypto"); const fs = require("node:fs"); process.stdout.write(crypto.createHash("sha256").update(fs.readFileSync(process.argv[1])).digest("hex"))' "$verification")"; then
+  rm -f "$original" "$verification"
+  echo 'digest update rejected: could not hash kustomization snapshot' >&2
+  exit 1
+fi
+if ! original_inode="$(node -e 'process.stdout.write(String(require("node:fs").statSync(process.argv[1]).ino))' "$kustomization")"; then
+  rm -f "$original" "$verification"
+  echo 'digest update rejected: could not inspect kustomization snapshot' >&2
+  exit 1
+fi
+if ! original_metadata="$(node -e 'const stat = require("node:fs").statSync(process.argv[1]); process.stdout.write(`${stat.mode & 0o7777}:${stat.uid}:${stat.gid}`)' "$kustomization")"; then
+  rm -f "$original" "$verification"
+  echo 'digest update rejected: could not inspect kustomization metadata' >&2
+  exit 1
+fi
+candidate="$(mktemp "$overlay/.update-gitops-digest-candidate.XXXXXX")"
+if ! cp -p "$original" "$candidate"; then
+  rm -f "$candidate" "$original" "$verification"
+  echo 'digest update rejected: could not prepare kustomization candidate' >&2
+  exit 1
+fi
+restore_needed=0
+preserve_recovery_snapshot() {
+  if [ -f "$original" ] && [ ! -L "$original" ]; then
+    recovery_snapshot="$original"
+  else
+    recovery_snapshot="$verification"
+  fi
+  echo "digest update rejected: recovery snapshot preserved: $recovery_snapshot" >&2
+}
+target_matches_original() {
+  if [ ! -f "$kustomization" ] || [ -L "$kustomization" ]; then
+    return 1
+  fi
+  if ! current_inode="$(node -e 'process.stdout.write(String(require("node:fs").statSync(process.argv[1]).ino))' "$kustomization")"; then
+    return 1
+  fi
+  if [ "$current_inode" != "$original_inode" ]; then
+    return 1
+  fi
+  if ! current_link_count="$(node -e 'process.stdout.write(String(require("node:fs").statSync(process.argv[1]).nlink))' "$kustomization")"; then
+    return 1
+  fi
+  if [ "$current_link_count" != "$link_count" ]; then
+    return 1
+  fi
+  if ! current_metadata="$(node -e 'const stat = require("node:fs").statSync(process.argv[1]); process.stdout.write(`${stat.mode & 0o7777}:${stat.uid}:${stat.gid}`)' "$kustomization")"; then
+    return 1
+  fi
+  if [ "$current_metadata" != "$original_metadata" ]; then
+    return 1
+  fi
+  if ! current_hash="$(node -e 'const crypto = require("node:crypto"); const fs = require("node:fs"); process.stdout.write(crypto.createHash("sha256").update(fs.readFileSync(process.argv[1])).digest("hex"))' "$kustomization")"; then
+    return 1
+  fi
+  [ "$current_hash" = "$snapshot_hash" ]
+}
+restore_kustomization() {
+  if [ -d "$kustomization" ]; then
+    preserve_recovery_snapshot
+    return 1
+  fi
+  if ! mv -f "$original" "$kustomization"; then
+    preserve_recovery_snapshot
+    return 1
+  fi
+  if [ -d "$kustomization" ] || [ ! -f "$kustomization" ] || [ -L "$kustomization" ]; then
+    preserve_recovery_snapshot
+    return 1
+  fi
+  if ! restored_link_count="$(node -e 'process.stdout.write(String(require("node:fs").statSync(process.argv[1]).nlink))' "$kustomization")"; then
+    preserve_recovery_snapshot
+    return 1
+  fi
+  if [ "$restored_link_count" -ne 1 ]; then
+    preserve_recovery_snapshot
+    return 1
+  fi
+  if ! restored_hash="$(node -e 'const crypto = require("node:crypto"); const fs = require("node:fs"); process.stdout.write(crypto.createHash("sha256").update(fs.readFileSync(process.argv[1])).digest("hex"))' "$kustomization")"; then
+    preserve_recovery_snapshot
+    return 1
+  fi
+  if [ "$restored_hash" != "$snapshot_hash" ]; then
+    preserve_recovery_snapshot
+    return 1
+  fi
+  rm -f "$verification" || true
+}
+cleanup() {
+  status="$?"
+  if [ "$restore_needed" -eq 1 ]; then
+    if ! restore_kustomization; then
+      status=1
+    fi
+  fi
+  if [ "$restore_needed" -eq 0 ]; then
+    rm -f "$candidate" "$original" "$verification" || true
+  fi
+  trap - EXIT HUP INT TERM
+  exit "$status"
+}
+trap cleanup EXIT HUP INT TERM
+
+node - "$original" "$candidate" "$digest" <<'NODE'
 'use strict';
 
 const fs = require('node:fs');
-const [file, digest] = process.argv.slice(2);
+const [file, candidate, digest] = process.argv.slice(2);
 const input = fs.readFileSync(file, 'utf8');
 const imageNames = input.match(
   /^  - name: ghcr\.io\/hannosirkel\/servitium$/gm,
@@ -50,22 +202,40 @@ const replacement = matches[0][0].replace(
   /digest: sha256:[0-9a-f]{64}$/,
   `digest: ${digest}`,
 );
-fs.writeFileSync(file, input.replace(imageBlock, replacement));
+fs.writeFileSync(candidate, input.replace(imageBlock, replacement));
 NODE
 
-git -C "$checkout" diff --check
+if ! target_matches_original; then
+  echo 'digest update rejected: kustomization changed during update' >&2
+  exit 1
+fi
 
-if [ "$(git -C "$checkout" diff --name-only)" != 'kustomization.yaml' ]; then
+if ! mv -f "$candidate" "$kustomization"; then
+  if target_matches_original; then
+    restore_needed=0
+  else
+    restore_needed=1
+  fi
+  exit 1
+fi
+restore_needed=1
+
+changed="$(git -C "$repository" diff --name-only)"
+if [ "$changed" != "$relative_overlay/kustomization.yaml" ]; then
   echo 'digest update rejected: unexpected changed file' >&2
   exit 1
 fi
-if [ "$(git -C "$checkout" diff --numstat)" != "1	1	kustomization.yaml" ]; then
+
+git -C "$repository" diff --check
+
+expected_numstat="$(printf '1\t1\t%s/kustomization.yaml' "$relative_overlay")"
+if [ "$(git -C "$repository" diff --numstat)" != "$expected_numstat" ]; then
   echo 'digest update rejected: unexpected diff size' >&2
   exit 1
 fi
 
 changed_lines="$(
-  git -C "$checkout" diff --unified=0 -- kustomization.yaml \
+  git -C "$repository" diff --unified=0 -- "$relative_overlay/kustomization.yaml" \
     | grep -E '^[+-]' | grep -Ev '^(---|\+\+\+)' || true
 )"
 if [ "$(printf '%s\n' "$changed_lines" | grep -c .)" -ne 2 ]; then
@@ -80,3 +250,7 @@ if [ "$(grep -c "^    digest: $digest$" "$kustomization")" -ne 1 ]; then
   echo 'digest update rejected: replacement was not exact' >&2
   exit 1
 fi
+
+restore_needed=0
+rm -f "$candidate" "$original" "$verification" || true
+trap - EXIT HUP INT TERM
