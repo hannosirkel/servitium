@@ -6,6 +6,7 @@ const path = require('node:path');
 
 // Load the immutable hero asset once during process startup.
 // This comment-only change exercises the deploy-test promotion path.
+// A second comment-only revision verifies rotated deployment credentials.
 const heroImage = fs.readFileSync(path.join(__dirname, 'assets', 'fantasy-overlord.png'));
 
 const homePage = `<!doctype html>
