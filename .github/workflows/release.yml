@@ -120,7 +120,7 @@ jobs:
           guard="$RUNNER_TEMP/update-gitops-digest.sh"
           printf '%s' "$GUARD_CONTENT" | base64 --decode >"$guard"
           chmod 0700 "$guard"
-          "$guard" "$IMAGE_DIGEST" "$GITHUB_WORKSPACE/gitops"
+          "$guard" "$IMAGE_DIGEST" "$GITHUB_WORKSPACE/gitops/overlays/live"
 
       - name: Commit and push the GitOps update
         env:
@@ -131,8 +131,9 @@ jobs:
           git config user.name 'servitium-deployer[bot]'
           git config user.email \
             'servitium-deployer[bot]@users.noreply.github.com'
-          git add kustomization.yaml
+          git add overlays/live/kustomization.yaml
+          git diff --cached --name-only | grep -qx 'overlays/live/kustomization.yaml'
           git diff --cached --check
-          git commit -m "deploy: servitium ${IMAGE_DIGEST}"
+          git commit -m "deploy(live): ${GITHUB_SHA} ${IMAGE_DIGEST}"
           git push "https://x-access-token:${APP_TOKEN}@github.com/hannosirkel/servitium-main.git" \
             HEAD:main
