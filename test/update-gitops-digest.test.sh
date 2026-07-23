@@ -94,6 +94,19 @@ if "$helper" "$new_digest" "$duplicate/overlays/test" >/dev/null 2>&1; then
   exit 1
 fi
 
+empty="$test_root/empty"
+write_fixture "$empty" 0
+empty_original="$test_root/empty-original.yaml"
+cp "$empty/overlays/test/kustomization.yaml" "$empty_original"
+if "$helper" "$new_digest" "$empty/overlays/test" >/dev/null 2>&1; then
+  echo 'empty overlay digest unexpectedly accepted' >&2
+  exit 1
+fi
+if ! cmp -s "$empty_original" "$empty/overlays/test/kustomization.yaml"; then
+  echo 'empty overlay rejection changed kustomization' >&2
+  exit 1
+fi
+
 symlink="$test_root/symlink"
 write_fixture "$symlink"
 mv "$symlink/overlays/test/kustomization.yaml" "$symlink/overlays/test/kustomization-target.yaml"
@@ -105,11 +118,55 @@ if "$helper" "$new_digest" "$symlink/overlays/test" >/dev/null 2>&1; then
   exit 1
 fi
 
+hardlinked="$test_root/hardlinked"
+write_fixture "$hardlinked"
+hardlink_target="$test_root/hardlink-target.yaml"
+ln "$hardlinked/overlays/test/kustomization.yaml" "$hardlink_target"
+if "$helper" "$new_digest" "$hardlinked/overlays/test" >/dev/null 2>&1; then
+  echo 'hard-linked kustomization unexpectedly accepted' >&2
+  exit 1
+fi
+if ! grep -q "digest: $old_digest" "$hardlink_target"; then
+  echo 'hard-linked external file changed' >&2
+  exit 1
+fi
+
 dirty="$test_root/dirty"
 write_fixture "$dirty"
 printf '%s\n' 'unrelated change' >"$dirty/second-file.txt"
 if "$helper" "$new_digest" "$dirty/overlays/test" >/dev/null 2>&1; then
   echo 'dirty checkout unexpectedly accepted' >&2
+  exit 1
+fi
+
+rollback="$test_root/rollback"
+write_fixture "$rollback"
+printf '%s\n' 'unchanged' >"$rollback/sentinel.txt"
+git -C "$rollback" add sentinel.txt
+git -C "$rollback" commit --quiet -m sentinel
+rollback_original="$test_root/rollback-original.yaml"
+cp "$rollback/overlays/test/kustomization.yaml" "$rollback_original"
+test_bin="$test_root/test-bin"
+mkdir "$test_bin"
+printf '%s\n' \
+  '#!/bin/sh' \
+  'if [ "${1:-}" = "-C" ] && [ "${3:-}" = "diff" ] && [ "${4:-}" = "--name-only" ]; then' \
+  '  printf "%s\\n" "concurrent mutation" > "$GITOPS_TEST_MUTATION_FILE"' \
+  'fi' \
+  'exec "$GITOPS_REAL_GIT" "$@"' >"$test_bin/git"
+chmod +x "$test_bin/git"
+if PATH="$test_bin:$PATH" GITOPS_REAL_GIT="$(command -v git)" \
+  GITOPS_TEST_MUTATION_FILE="$rollback/sentinel.txt" \
+  "$helper" "$new_digest" "$rollback/overlays/test" >/dev/null 2>&1; then
+  echo 'post-write concurrent mutation unexpectedly accepted' >&2
+  exit 1
+fi
+if ! cmp -s "$rollback_original" "$rollback/overlays/test/kustomization.yaml"; then
+  echo 'failed update changed kustomization' >&2
+  exit 1
+fi
+if [[ "$(cat "$rollback/sentinel.txt")" != 'concurrent mutation' ]]; then
+  echo 'failed update overwrote concurrent change' >&2
   exit 1
 fi
 

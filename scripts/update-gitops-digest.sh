@@ -50,10 +50,38 @@ if [ ! -f "$kustomization" ] || [ -L "$kustomization" ]; then
   echo 'digest update rejected: kustomization is unavailable' >&2
   exit 1
 fi
+if ! link_count="$(node -e 'process.stdout.write(String(require("node:fs").statSync(process.argv[1]).nlink))' "$kustomization")"; then
+  echo 'digest update rejected: kustomization link count is unavailable' >&2
+  exit 1
+fi
+if [ "$link_count" -ne 1 ]; then
+  echo 'digest update rejected: kustomization must not be hard-linked' >&2
+  exit 1
+fi
 if [ -n "$(git -C "$repository" status --porcelain)" ]; then
   echo 'digest update rejected: checkout is not clean' >&2
   exit 1
 fi
+
+original="$(mktemp "$overlay/.update-gitops-digest.XXXXXX")"
+if ! cp -p "$kustomization" "$original"; then
+  rm -f "$original"
+  echo 'digest update rejected: could not snapshot kustomization' >&2
+  exit 1
+fi
+restore_needed=1
+cleanup() {
+  status="$?"
+  if [ "$restore_needed" -eq 1 ]; then
+    if ! mv -f "$original" "$kustomization"; then
+      status=1
+    fi
+  fi
+  rm -f "$original" || true
+  trap - EXIT HUP INT TERM
+  exit "$status"
+}
+trap cleanup EXIT HUP INT TERM
 
 node - "$kustomization" "$digest" <<'NODE'
 'use strict';
@@ -108,3 +136,7 @@ if [ "$(grep -c "^    digest: $digest$" "$kustomization")" -ne 1 ]; then
   echo 'digest update rejected: replacement was not exact' >&2
   exit 1
 fi
+
+restore_needed=0
+rm -f "$original" || true
+trap - EXIT HUP INT TERM
