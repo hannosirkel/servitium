@@ -9,6 +9,10 @@ trap 'rm -rf -- "$test_root"' EXIT
 old_digest="sha256:$(printf '0%.0s' {1..64})"
 new_digest="sha256:$(printf 'a%.0s' {1..64})"
 
+inode_of() {
+  node -e 'process.stdout.write(String(require("node:fs").statSync(process.argv[1]).ino))' "$1"
+}
+
 write_kustomization() {
   local directory="$1"
   local digest_lines="${2:-1}"
@@ -89,8 +93,19 @@ fi
 
 duplicate="$test_root/duplicate"
 write_fixture "$duplicate" 2
+duplicate_original="$test_root/duplicate-original.yaml"
+cp "$duplicate/overlays/test/kustomization.yaml" "$duplicate_original"
+duplicate_inode="$(inode_of "$duplicate/overlays/test/kustomization.yaml")"
 if "$helper" "$new_digest" "$duplicate/overlays/test" >/dev/null 2>&1; then
   echo 'duplicate image digest unexpectedly accepted' >&2
+  exit 1
+fi
+if ! cmp -s "$duplicate_original" "$duplicate/overlays/test/kustomization.yaml"; then
+  echo 'duplicate digest rejection changed kustomization bytes' >&2
+  exit 1
+fi
+if [[ "$(inode_of "$duplicate/overlays/test/kustomization.yaml")" != "$duplicate_inode" ]]; then
+  echo 'duplicate digest rejection changed kustomization inode' >&2
   exit 1
 fi
 
@@ -98,12 +113,17 @@ empty="$test_root/empty"
 write_fixture "$empty" 0
 empty_original="$test_root/empty-original.yaml"
 cp "$empty/overlays/test/kustomization.yaml" "$empty_original"
+empty_inode="$(inode_of "$empty/overlays/test/kustomization.yaml")"
 if "$helper" "$new_digest" "$empty/overlays/test" >/dev/null 2>&1; then
   echo 'empty overlay digest unexpectedly accepted' >&2
   exit 1
 fi
 if ! cmp -s "$empty_original" "$empty/overlays/test/kustomization.yaml"; then
   echo 'empty overlay rejection changed kustomization' >&2
+  exit 1
+fi
+if [[ "$(inode_of "$empty/overlays/test/kustomization.yaml")" != "$empty_inode" ]]; then
+  echo 'empty overlay rejection changed kustomization inode' >&2
   exit 1
 fi
 

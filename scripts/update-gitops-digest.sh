@@ -63,6 +63,38 @@ if [ -n "$(git -C "$repository" status --porcelain)" ]; then
   exit 1
 fi
 
+candidate="$(mktemp "$overlay/.update-gitops-digest-candidate.XXXXXX")"
+cleanup_candidate() {
+  status="$?"
+  rm -f "$candidate" || true
+  trap - EXIT HUP INT TERM
+  exit "$status"
+}
+trap cleanup_candidate EXIT HUP INT TERM
+
+node - "$kustomization" "$candidate" "$digest" <<'NODE'
+'use strict';
+
+const fs = require('node:fs');
+const [file, candidate, digest] = process.argv.slice(2);
+const input = fs.readFileSync(file, 'utf8');
+const imageNames = input.match(
+  /^  - name: ghcr\.io\/hannosirkel\/servitium$/gm,
+) || [];
+const digestLines = input.match(/^    digest: sha256:[0-9a-f]{64}$/gm) || [];
+const imageBlock = /^  - name: ghcr\.io\/hannosirkel\/servitium\n    newName: ghcr\.io\/hannosirkel\/servitium\n    digest: sha256:[0-9a-f]{64}$/gm;
+const matches = [...input.matchAll(imageBlock)];
+if (imageNames.length !== 1 || digestLines.length !== 1 || matches.length !== 1) {
+  process.stderr.write('digest update rejected: expected one image entry\n');
+  process.exit(1);
+}
+const replacement = matches[0][0].replace(
+  /digest: sha256:[0-9a-f]{64}$/,
+  `digest: ${digest}`,
+);
+fs.writeFileSync(candidate, input.replace(imageBlock, replacement));
+NODE
+
 original="$(mktemp "$overlay/.update-gitops-digest.XXXXXX")"
 if ! cp -p "$kustomization" "$original"; then
   rm -f "$original"
@@ -80,7 +112,12 @@ if ! snapshot_hash="$(node -e 'const crypto = require("node:crypto"); const fs =
   echo 'digest update rejected: could not hash kustomization snapshot' >&2
   exit 1
 fi
-restore_needed=1
+if ! original_inode="$(node -e 'process.stdout.write(String(require("node:fs").statSync(process.argv[1]).ino))' "$kustomization")"; then
+  rm -f "$original" "$verification"
+  echo 'digest update rejected: could not inspect kustomization snapshot' >&2
+  exit 1
+fi
+restore_needed=0
 preserve_recovery_snapshot() {
   if [ -f "$original" ] && [ ! -L "$original" ]; then
     recovery_snapshot="$original"
@@ -88,6 +125,21 @@ preserve_recovery_snapshot() {
     recovery_snapshot="$verification"
   fi
   echo "digest update rejected: recovery snapshot preserved: $recovery_snapshot" >&2
+}
+target_matches_original() {
+  if [ ! -f "$kustomization" ] || [ -L "$kustomization" ]; then
+    return 1
+  fi
+  if ! current_inode="$(node -e 'process.stdout.write(String(require("node:fs").statSync(process.argv[1]).ino))' "$kustomization")"; then
+    return 1
+  fi
+  if [ "$current_inode" != "$original_inode" ]; then
+    return 1
+  fi
+  if ! current_hash="$(node -e 'const crypto = require("node:crypto"); const fs = require("node:fs"); process.stdout.write(crypto.createHash("sha256").update(fs.readFileSync(process.argv[1])).digest("hex"))' "$kustomization")"; then
+    return 1
+  fi
+  [ "$current_hash" = "$snapshot_hash" ]
 }
 restore_kustomization() {
   if [ -d "$kustomization" ]; then
@@ -128,35 +180,22 @@ cleanup() {
     fi
   fi
   if [ "$restore_needed" -eq 0 ]; then
-    rm -f "$original" "$verification" || true
+    rm -f "$candidate" "$original" "$verification" || true
   fi
   trap - EXIT HUP INT TERM
   exit "$status"
 }
 trap cleanup EXIT HUP INT TERM
 
-node - "$kustomization" "$digest" <<'NODE'
-'use strict';
-
-const fs = require('node:fs');
-const [file, digest] = process.argv.slice(2);
-const input = fs.readFileSync(file, 'utf8');
-const imageNames = input.match(
-  /^  - name: ghcr\.io\/hannosirkel\/servitium$/gm,
-) || [];
-const digestLines = input.match(/^    digest: sha256:[0-9a-f]{64}$/gm) || [];
-const imageBlock = /^  - name: ghcr\.io\/hannosirkel\/servitium\n    newName: ghcr\.io\/hannosirkel\/servitium\n    digest: sha256:[0-9a-f]{64}$/gm;
-const matches = [...input.matchAll(imageBlock)];
-if (imageNames.length !== 1 || digestLines.length !== 1 || matches.length !== 1) {
-  process.stderr.write('digest update rejected: expected one image entry\n');
-  process.exit(1);
-}
-const replacement = matches[0][0].replace(
-  /digest: sha256:[0-9a-f]{64}$/,
-  `digest: ${digest}`,
-);
-fs.writeFileSync(file, input.replace(imageBlock, replacement));
-NODE
+if ! mv -f "$candidate" "$kustomization"; then
+  if target_matches_original; then
+    restore_needed=0
+  else
+    restore_needed=1
+  fi
+  exit 1
+fi
+restore_needed=1
 
 changed="$(git -C "$repository" diff --name-only)"
 if [ "$changed" != "$relative_overlay/kustomization.yaml" ]; then
@@ -190,5 +229,5 @@ if [ "$(grep -c "^    digest: $digest$" "$kustomization")" -ne 1 ]; then
 fi
 
 restore_needed=0
-rm -f "$original" "$verification" || true
+rm -f "$candidate" "$original" "$verification" || true
 trap - EXIT HUP INT TERM
