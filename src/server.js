@@ -6,6 +6,7 @@ const path = require('node:path');
 
 // Load the immutable hero asset once during process startup.
 const heroImage = fs.readFileSync(path.join(__dirname, 'assets', 'fantasy-overlord.png'));
+const favicon = fs.readFileSync(path.join(__dirname, 'assets', 'favicon.svg'));
 const diceRoot = path.join(__dirname, '..', 'dist', 'dice');
 const chessRoot = path.join(__dirname, '..', 'dist', 'chess');
 const mtgRoot = path.join(__dirname, '..', 'dist', 'mtg');
@@ -16,6 +17,7 @@ const mimeTypes = {
   '.json': 'application/json; charset=utf-8',
   '.png': 'image/png',
   '.wasm': 'application/wasm',
+  '.svg': 'image/svg+xml',
   '.jpg': 'image/jpeg',
 };
 
@@ -25,6 +27,7 @@ const homePage = `<!doctype html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Servitium</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <style>
     * { box-sizing: border-box; }
     html, body { width: 100%; height: 100%; margin: 0; background: #080b0d; }
@@ -91,6 +94,11 @@ function createServer() {
 
     if (request.method === 'GET' && request.url === '/assets/fantasy-overlord.png') {
       send(response, 200, 'image/png', heroImage, 'public, max-age=31536000, immutable');
+      return;
+    }
+
+    if (request.method === 'GET' && request.url === '/favicon.svg') {
+      send(response, 200, 'image/svg+xml', favicon, 'public, max-age=86400');
       return;
     }
 

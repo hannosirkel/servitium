@@ -9,6 +9,11 @@ beforeEach(() => {
 });
 
 describe('chess clock flow', () => {
+  it('offers the universal full-screen control', () => {
+    render(<App />);
+    expect(screen.getByRole('button', { name: 'Enter full screen' })).toBeInTheDocument();
+  });
+
   it('starts the opponent clock when the first mover taps', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /White clock/ }));

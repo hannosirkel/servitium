@@ -25,9 +25,10 @@ Monarch and initiative ownership are optional table roles with highlighted
 selection and player-panel status.
 
 The tools dialog also provides visible coin and d20 results, optional haptics,
-screen wake lock, and full-screen requests where supported. Turn tracking is
-not part of the interface because it adds an action every turn without powering
-statistics or timing in this application.
+and screen wake lock. Full-screen mode is a primary shared control on both
+setup and active-table screens rather than an MTG-specific tool. Turn tracking
+is not part of the interface because it adds an action every turn without
+powering statistics or timing in this application.
 
 Two-, three-, and four-player grids have explicit layouts. Far-side panels
 rotate only on coarse-pointer touch devices for tabletop use; desktop panels

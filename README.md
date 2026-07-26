@@ -16,7 +16,8 @@ A small Node.js service for the community sandbox. It listens on port `8099`.
 - `/healthz` — readiness and liveness status.
 
 The home page at `/` links to every application. The MTG research and plans are
-in `docs/working/`.
+in `docs/working/`. All pages share the Servitium favicon, and each application
+provides a full-screen control.
 
 ## Development
 

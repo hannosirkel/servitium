@@ -9,6 +9,9 @@ starts the opponent's clock, matching a physical chess clock. During play only
 the active clock can be tapped to switch turns. The game can be paused and
 resumed.
 
+The header exposes the shared full-screen control independently of clock
+settings and game state.
+
 Running time is derived from wall-clock timestamps so background tabs and page
 reloads do not stop or drift the clock. Active state is stored in
 `localStorage`. Resetting an active game requires confirmation, and leaving

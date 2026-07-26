@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import FullscreenButton from '../shared/FullscreenButton';
 import {
   PRESETS, STORAGE_KEY, currentRemaining, formatClock, initialState, pauseClock,
   restoreGame, startClock, switchTurn, type BonusMode, type ClockConfig,
@@ -81,6 +82,7 @@ export default function App() {
       <header className="masthead">
         <a className="brand" href="/" aria-label="Servitium home"><span className="brand-mark">S</span><span><b>SERVITIUM</b><small>THE CHESS CLOCK</small></span></a>
         <div className="header-actions">
+          <FullscreenButton />
           <button onClick={() => setShowSettings((value) => !value)} disabled={clock.running}>Settings</button>
           <button onClick={reset}>Reset</button>
         </div>

@@ -16,6 +16,10 @@ from its own `dist/` directory. Hashed assets use immutable caching; application
 HTML is not cached. Resolved file paths must remain inside the relevant
 application root.
 
+The home page and all application entrypoints use the shared Servitium SVG
+favicon at `/favicon.svg`. Each application exposes the same shared full-screen
+control; it enters or exits browser full-screen mode where the API is supported.
+
 The production image builds every frontend in a Node build stage, then runs the
 server as user `10001` in a smaller Node runtime stage. The service has no
 database, account system, or server-side application state.
