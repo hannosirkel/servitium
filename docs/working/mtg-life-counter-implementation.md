@@ -28,7 +28,7 @@ Date: 2026-07-26
 
 Create:
 
-- `docs/working/mtg-life-counter-{design,implementation}.md`
+- `docs/working/mtg-life-counter-implementation.md`
 - `mtg.html`, `vite.mtg.config.ts`
 - `src/mtg/App.tsx`, `logic.ts`, `styles.css`, `main.tsx`, `testSetup.ts`
 - `src/mtg/App.test.tsx`, `logic.test.ts`
@@ -126,9 +126,9 @@ Manual matrix:
 
 ## Completion criteria
 
-The design acceptance criteria are met; no new runtime dependencies exist;
-all specified automated tests and repository validation commands pass; the
-production server serves `/mtg/`; changes are limited to the module,
-integration, tests, documentation, and necessary build wiring; and the final
-diff contains no licensed Wizards art, symbols, credentials, or unrelated
-changes.
+The behavior documented in `docs/current/mtg.md` is implemented; no new runtime
+dependencies exist; all specified automated tests and repository validation
+commands pass; the production server serves `/mtg/`; changes are limited to the
+module, integration, tests, documentation, and necessary build wiring; and the
+final diff contains no licensed Wizards art, symbols, credentials, or
+unrelated changes.
