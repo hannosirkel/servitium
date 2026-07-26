@@ -27,6 +27,9 @@ before handoff.
   changes. Add an ADR only for a durable, non-obvious choice.
 - Review the complete diff and outgoing history before push. Never bypass the
   repository's pre-push secret scan.
+- Keep the tracked `.githooks/pre-commit` gitleaks scan enabled in provisioned
+  checkouts. Hook activation is managed by checkout provisioning; do not
+  replace it with an undocumented local Git configuration.
 - Push a reviewable branch and open a pull request. Test deployment uses the
   `deploy-test` label; deployment and merge rules are documented outside this
   repository in Mihkel's workspace.

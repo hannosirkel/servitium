@@ -30,3 +30,8 @@ database, account system, or server-side application state.
 Vitest cover frontend logic and components; Node tests cover routes and
 delivery workflow contracts. `test/container.test.sh` protects the container
 runtime contract.
+
+The repository ships a fail-closed `.githooks/pre-commit` hook that scans
+staged changes with gitleaks. Checkout provisioning owns the `core.hooksPath`
+setting that activates tracked hooks; the repository does not mutate local Git
+configuration.
