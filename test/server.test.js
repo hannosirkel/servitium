@@ -38,6 +38,7 @@ test('GET / returns the Servitium image page', async () => {
   assert.match(body, /alt="[^"]+"/);
   assert.match(body, /href="\/dice\/"/);
   assert.match(body, /href="\/chess-clock\/"/);
+  assert.match(body, /href="\/mtg\/"/);
 });
 
 test('GET /assets/fantasy-overlord.png returns the hero image', async () => {
@@ -81,6 +82,23 @@ test('GET /chess-clock/ serves the built frontend with subpath assets', {
   const body = await response.text();
   assert.match(body, /Chess Clock/);
   assert.match(body, /\/chess-clock\/assets\//);
+});
+
+test('GET /mtg redirects to the canonical trailing-slash path', async () => {
+  const response = await fetch(`${baseUrl}/mtg`, { redirect: 'manual' });
+  assert.equal(response.status, 308);
+  assert.equal(response.headers.get('location'), '/mtg/');
+});
+
+test('GET /mtg/ serves the built frontend with subpath assets', {
+  skip: !fs.existsSync(path.join(__dirname, '..', 'dist', 'mtg', 'mtg.html')),
+}, async () => {
+  const response = await fetch(`${baseUrl}/mtg/`);
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('content-type'), /^text\/html/);
+  const body = await response.text();
+  assert.match(body, /MTG Life Counter/);
+  assert.match(body, /\/mtg\/assets\//);
 });
 
 test('GET /healthz reports readiness', async () => {

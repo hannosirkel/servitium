@@ -7,7 +7,21 @@ by default and exposes:
 - `GET /assets/fantasy-overlord.png` — generated hero artwork
 - `GET /dice` — frontend-only 3D dice hall
 - `GET /chess-clock` — two-player chess clock with presets, increment, and delay
+- `GET /mtg` — local-first MTG life counter for two to four players
 - `GET /healthz` — readiness and liveness response
+
+## MTG life counter
+
+Arcane Ledger supports Constructed/Limited, Commander, Brawl, Two-Headed
+Giant, and custom games. It includes explicit life controls, poison,
+source-specific Commander damage, tax, turn and table-role tracking, exact
+undo/redo history, rematches, and versioned local recovery. The main table is
+designed for two, three, or four players around a phone or tablet; no account,
+network connection, card database, or copyrighted card artwork is required.
+
+The implementation and research rationale live in
+`docs/working/mtg-life-counter-design.md` and
+`docs/working/mtg-life-counter-implementation.md`.
 
 ## Chess clock product decisions
 
