@@ -17,6 +17,15 @@ function start(format: string, players = 2) {
 }
 
 describe('MTG table flow', () => {
+  it('offers full screen from setup and the active table, not Tools', () => {
+    render(<App />);
+    expect(screen.getByRole('button', { name: 'Enter full screen' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Start game' }));
+    expect(screen.getByRole('button', { name: 'Enter full screen' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Tools' }));
+    expect(within(screen.getByRole('dialog')).queryByRole('button', { name: /full screen/i })).not.toBeInTheDocument();
+  });
+
   it('defaults to Constructed with two visibly selected players', () => {
     render(<App />);
     expect(screen.getByRole('button', { name: /^Constructed/ })).toHaveAttribute('aria-pressed', 'true');

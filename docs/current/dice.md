@@ -11,4 +11,5 @@ remain available when WebGL fails or reduced motion is requested.
 Each result shows the total and individual values. The ten most recent throws
 are stored in `localStorage` and can be cleared. Motion permission is requested
 only through an explicit user action. The application has no network or server
-state dependency after its static assets load.
+state dependency after its static assets load. The header exposes the shared
+full-screen control.

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type DiceBox from '@3d-dice/dice-box';
+import FullscreenButton from '../shared/FullscreenButton';
 import {
   DICE_TYPES, addHistory, clampCount, clearHistory, formatTime, isFlick,
   makeRecord, motionMagnitude, persistHistory, randomValues, restoreHistory,
@@ -157,7 +158,10 @@ export default function App() {
           <span className="brand-mark">S</span>
           <span><b>SERVITIUM</b><small>THE DICE HALL</small></span>
         </a>
-        <p className="motto">Fortune favours the bold</p>
+        <div className="module-actions">
+          <p className="motto">Fortune favours the bold</p>
+          <FullscreenButton />
+        </div>
       </header>
 
       <div className="layout">

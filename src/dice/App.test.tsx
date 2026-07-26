@@ -18,6 +18,11 @@ beforeEach(() => {
 });
 
 describe('accessible fallbacks', () => {
+  it('offers the universal full-screen control', () => {
+    render(<App />);
+    expect(screen.getByRole('button', { name: 'Enter full screen' })).toBeInTheDocument();
+  });
+
   it('motion denial leaves the tap control available', async () => {
     requestPermission.mockResolvedValue('denied');
     render(<App />);

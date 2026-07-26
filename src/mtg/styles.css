@@ -23,7 +23,7 @@ h2 { margin: 8px 0 24px; font-size: 32px; }
 h3 { margin: 28px 0 12px; font-size: 18px; color: #e9d5ad; }
 .setup-shell { position: relative; min-height: 100vh; padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom)); overflow: hidden; }
 .ambient { position: fixed; inset: -20px; z-index: -1; background: linear-gradient(120deg,#0e1317e8,#252b31e8), url('/assets/fantasy-overlord.png') center/cover; filter: saturate(.55); }
-.brand-header { max-width: 920px; margin: auto; }
+.brand-header { max-width: 920px; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .brand { display: flex; align-items: center; gap: 11px; color: inherit; text-decoration: none; }
 .brand-mark { width: 40px; height: 44px; display: grid; place-items: center; border: 1px solid var(--gold); color: var(--gold-light); font: 700 20px Georgia, serif; clip-path: polygon(50% 0,96% 20%,89% 81%,50% 100%,11% 81%,4% 20%); background: #1d2228; }
 .brand b,.brand small { display: block; }.brand b { font: 600 14px Georgia,serif; letter-spacing: .2em; }.brand small { margin-top: 5px; color: #a69e90; font-size: 8px; letter-spacing: .28em; }

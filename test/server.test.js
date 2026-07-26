@@ -50,6 +50,13 @@ test('GET /assets/fantasy-overlord.png returns the hero image', async () => {
   assert.deepEqual(Array.from(body.subarray(0, 8)), [137, 80, 78, 71, 13, 10, 26, 10]);
 });
 
+test('GET /favicon.svg returns the shared site icon', async () => {
+  const response = await fetch(`${baseUrl}/favicon.svg`);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('content-type'), 'image/svg+xml');
+  assert.match(await response.text(), /<svg/);
+});
+
 test('GET /dice redirects to the canonical trailing-slash path', async () => {
   const response = await fetch(`${baseUrl}/dice`, { redirect: 'manual' });
   assert.equal(response.status, 308);

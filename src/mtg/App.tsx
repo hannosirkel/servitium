@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import FullscreenButton from '../shared/FullscreenButton';
 import {
   PRESETS, STORAGE_KEY, adjustCommanderDamage, adjustCommanderTax, adjustLife, adjustPoison,
   createGame, persistGame, playerWarnings, poisonLimit, redo, rematch, restoreGame, setRole,
@@ -29,6 +30,7 @@ function Setup({ onStart }: { onStart: (setup: GameSetup) => void }) {
           <span className="brand-mark">S</span>
           <span><b>SERVITIUM</b><small>ARCANE LEDGER</small></span>
         </a>
+        <FullscreenButton />
       </header>
       <section className="setup-card" aria-labelledby="setup-title">
         <span className="eyebrow">NEW TABLE</span>
@@ -207,6 +209,7 @@ export default function App() {
 
       <nav className="game-toolbar" aria-label="Game controls">
         <a href="/" aria-label="Servitium home">S</a>
+        <FullscreenButton compact />
         <button onClick={() => setGame(undo(game))} disabled={!game.history.length} aria-label="Undo last change">↶<small>Undo</small></button>
         <button onClick={() => setGame(redo(game))} disabled={!game.future.length} aria-label="Redo change">↷<small>Redo</small></button>
         <button aria-label="History" onClick={() => open('history')}>☷<small>History</small></button>
@@ -280,7 +283,6 @@ export default function App() {
                 setAnnouncement(result);
               }}>Roll d20</button>
               <button aria-pressed={wakeActive} onClick={() => void toggleWake()}>{wakeActive ? 'Screen awake' : 'Keep awake'}</button>
-              <button onClick={() => void document.documentElement.requestFullscreen?.()}>Full screen</button>
               <button aria-pressed={haptics} onClick={() => setHaptics((value) => !value)}>Haptics {haptics ? 'on' : 'off'}</button>
             </div>
           </>
