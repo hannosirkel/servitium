@@ -99,7 +99,6 @@ would add network, licensing, privacy, and maintenance costs.
 - Atomic Commander-damage-plus-life updates.
 - Undo, redo, contextual history, confirmed rematch/new game.
 - Versioned active-game persistence with defensive validation.
-- First-player and turn indicators.
 - Keyboard operation, visible focus, live announcements, reduced motion.
 - Optional haptics and wake lock when browser support exists.
 
@@ -147,7 +146,7 @@ would add network, licensing, privacy, and maintenance costs.
 3. Tap explicit life controls. The total changes immediately, feedback is
    announced, haptic feedback is optional, and history/persistence update.
 4. Open a player's counters sheet for poison, Commander damage, or tax.
-5. Use central turn/first-player/status tools without obscuring player totals.
+5. Assign monarch or initiative from the table tools when relevant.
 6. Undo/redo from the toolbar; inspect recent changes in the history dialog.
 7. Choose Rematch to restore starting values with the same setup, or New game
    to return to setup; both confirm after game activity.
@@ -156,7 +155,7 @@ would add network, licensing, privacy, and maintenance costs.
 
 The setup is a compact Servitium panel. The game view fills the viewport with a
 small central command bar and colored player panels. Each panel uses a player
-name, optional turn/status chips, a very large numeric total, four labeled
+name, optional status chips, a very large numeric total, four labeled
 buttons, and a visible Counters button with poison/Commander warning summaries.
 There are no essential gestures. Detail sheets use native dialog semantics and
 large stepper buttons.
@@ -168,8 +167,8 @@ confirm dialog. Undo/redo are disabled when unavailable.
 ## 9. Two-, three-, and four-player layout behavior
 
 - Two players: two equal panels split vertically in portrait and horizontally
-  in landscape. The far player's content rotates 180 degrees so each person can
-  operate their own side of a tabletop device.
+  in landscape. On touch devices the far player's content rotates 180 degrees
+  for tabletop use; desktop browsers keep every panel upright.
 - Three players: one full-width near panel and two equal far panels; the far
   pair rotate 180 degrees. This avoids an empty fourth quadrant.
 - Four players: a two-by-two grid, with the far row rotated 180 degrees.
@@ -188,7 +187,7 @@ queries control geometry; state and DOM order stay stable.
 
 ## 11. Progressive disclosure
 
-Life adjustment is always visible. A compact toolbar exposes turn, undo, redo,
+Life adjustment is always visible. A compact toolbar exposes undo, redo,
 history, and game menu. Poison and a warning summary are visible on each panel;
 all source-specific Commander damage and tax controls open in a player sheet.
 Monarch, initiative, dice, wake lock, and full screen live in the Tools dialog.
@@ -207,7 +206,7 @@ borders; orientation is never locked.
 ## 13. Application state model
 
 `GameState` contains schema version, format, starting life, players/teams,
-active turn and first player, monarch/initiative owners, history, redo stack,
+monarch/initiative owners, history, redo stack,
 and updated time. Each player has stable id, name, theme, life, poison,
 commander tax, and a map of Commander damage keyed by source player id.
 

@@ -51,7 +51,7 @@ complexity.
 `createGame(setup)` creates normalized stable players or two 2HG teams.
 `commit(game, mutation, label)` captures before/after snapshots, clears redo,
 caps history, and stamps the update. Domain helpers implement life, poison,
-Commander damage plus life, tax, turn, and global-role changes. `undo` applies
+Commander damage plus life, tax, and global-role changes. `undo` applies
 the previous snapshot and pushes the entry to redo; `redo` reverses that.
 Rematch creates fresh values with the same format/names/themes.
 
@@ -79,7 +79,8 @@ Use a stable CSS grid with `data-count` and orientation queries:
 - three: one near full-width plus two far halves portrait, intentional
   one-plus-two landscape arrangement;
 - four: two-by-two;
-- far-side panels receive a presentation-only 180-degree inner rotation.
+- far-side panels receive a presentation-only 180-degree inner rotation on
+  coarse-pointer touch devices; desktop panels stay upright.
 
 Every target is at least 44 px. Use buttons rather than gesture surfaces,
 visible text/icon-independent labels, `aria-live`, native dialog focus
@@ -105,7 +106,7 @@ Component:
 - undo/redo and history dialog;
 - reset/new-game confirmation;
 - poison and per-source Commander controls;
-- turn/first player, tools, and 2HG UI;
+- table-role tools and 2HG UI;
 - keyboard activation and accessible dialog/control names;
 - `data-count` hooks used by portrait/landscape CSS.
 

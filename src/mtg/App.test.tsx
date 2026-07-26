@@ -17,6 +17,12 @@ function start(format: string, players = 2) {
 }
 
 describe('MTG table flow', () => {
+  it('defaults to Constructed with two visibly selected players', () => {
+    render(<App />);
+    expect(screen.getByRole('button', { name: /^Constructed/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '2' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it.each([2, 3, 4])('starts and renders %i intentional player panels', (count) => {
     start('Constructed', count);
     expect(screen.getAllByRole('region')).toHaveLength(count);
@@ -52,6 +58,20 @@ describe('MTG table flow', () => {
     expect(screen.getAllByRole('region')).toHaveLength(2);
     expect(screen.getAllByText('30')).toHaveLength(2);
     expect(screen.getAllByText(/\/15/)).toHaveLength(2);
+  });
+
+  it('highlights table roles and shows random utility results', () => {
+    start('Constructed');
+    fireEvent.click(screen.getByRole('button', { name: 'Tools' }));
+    expect(screen.queryByRole('heading', { name: 'Pass the turn' })).not.toBeInTheDocument();
+    const crown = screen.getByRole('button', { name: 'Crown Player 1' });
+    fireEvent.click(crown);
+    expect(crown).toHaveAttribute('aria-pressed', 'true');
+    vi.spyOn(Math, 'random').mockReturnValue(.1);
+    fireEvent.click(screen.getByRole('button', { name: 'Flip coin' }));
+    expect(document.querySelector('.utility-result')).toHaveTextContent('Coin: heads');
+    fireEvent.click(screen.getByRole('button', { name: 'Roll d20' }));
+    expect(document.querySelector('.utility-result')).toHaveTextContent('D20: 3');
   });
 
   it('persists and restores the active game', () => {

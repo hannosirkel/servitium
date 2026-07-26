@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   HISTORY_LIMIT, STORAGE_KEY, adjustCommanderDamage, adjustLife, adjustPoison, createGame,
-  persistGame, playerWarnings, poisonLimit, redo, rematch, restoreGame, setTurn, undo,
+  persistGame, playerWarnings, poisonLimit, redo, rematch, restoreGame, undo,
 } from './logic';
 
 describe('MTG game model', () => {
@@ -52,11 +52,8 @@ describe('MTG game model', () => {
     expect(playerWarnings(game, game.players[0])).toContain('life total is zero or less');
   });
 
-  it('tracks turn order and rematches without retaining counters', () => {
-    let game = createGame({ format: 'commander', playerCount: 3 });
-    game = setTurn(game, 'player-2');
-    game = setTurn(game, 'player-1');
-    expect(game.turn).toBe(2);
+  it('rematches without retaining counters', () => {
+    const game = createGame({ format: 'commander', playerCount: 3 });
     const next = rematch(adjustPoison(game, 'player-1', 3));
     expect(next.players[0].poison).toBe(0);
     expect(next.players[0].name).toBe('Player 1');

@@ -37,7 +37,7 @@ test('GET / returns the Servitium image page', async () => {
   assert.match(body, /src="\/assets\/fantasy-overlord\.png"/);
   assert.match(body, /alt="[^"]+"/);
   assert.match(body, /href="\/dice\/"/);
-  assert.match(body, /href="\/chess-clock\/"/);
+  assert.match(body, /href="\/chess\/"/);
   assert.match(body, /href="\/mtg\/"/);
 });
 
@@ -67,21 +67,27 @@ test('GET /dice/ serves the built frontend with subpath assets', {
   assert.match(body, /\/dice\/assets\//);
 });
 
-test('GET /chess-clock redirects to the canonical trailing-slash path', async () => {
+test('GET /chess-clock redirects to the shorter chess route', async () => {
   const response = await fetch(`${baseUrl}/chess-clock`, { redirect: 'manual' });
   assert.equal(response.status, 308);
-  assert.equal(response.headers.get('location'), '/chess-clock/');
+  assert.equal(response.headers.get('location'), '/chess/');
 });
 
-test('GET /chess-clock/ serves the built frontend with subpath assets', {
-  skip: !fs.existsSync(path.join(__dirname, '..', 'dist', 'chess-clock', 'chess-clock.html')),
+test('GET /chess redirects to the canonical trailing-slash path', async () => {
+  const response = await fetch(`${baseUrl}/chess`, { redirect: 'manual' });
+  assert.equal(response.status, 308);
+  assert.equal(response.headers.get('location'), '/chess/');
+});
+
+test('GET /chess/ serves the built frontend with subpath assets', {
+  skip: !fs.existsSync(path.join(__dirname, '..', 'dist', 'chess', 'chess-clock.html')),
 }, async () => {
-  const response = await fetch(`${baseUrl}/chess-clock/`);
+  const response = await fetch(`${baseUrl}/chess/`);
   assert.equal(response.status, 200);
   assert.match(response.headers.get('content-type'), /^text\/html/);
   const body = await response.text();
   assert.match(body, /Chess Clock/);
-  assert.match(body, /\/chess-clock\/assets\//);
+  assert.match(body, /\/chess\/assets\//);
 });
 
 test('GET /mtg redirects to the canonical trailing-slash path', async () => {

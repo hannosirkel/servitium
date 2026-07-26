@@ -2,14 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import {
   PRESETS, STORAGE_KEY, adjustCommanderDamage, adjustCommanderTax, adjustLife, adjustPoison,
   createGame, persistGame, playerWarnings, poisonLimit, redo, rematch, restoreGame, setRole,
-  setTurn, undo, type FormatId, type GameSetup, type GameState, type PlayerState,
+  undo, type FormatId, type GameSetup, type GameState, type PlayerState,
 } from './logic';
 
 type DialogName = 'counters' | 'history' | 'tools' | 'game' | null;
 type WakeLockSentinelLike = { release: () => Promise<void>; addEventListener: (name: string, fn: () => void) => void };
 
 function Setup({ onStart }: { onStart: (setup: GameSetup) => void }) {
-  const [format, setFormat] = useState<FormatId>('commander');
+  const [format, setFormat] = useState<FormatId>('constructed');
   const preset = PRESETS.find((item) => item.id === format)!;
   const [count, setCount] = useState(preset.defaultPlayers);
   const [customLife, setCustomLife] = useState(20);
@@ -106,8 +106,6 @@ function PlayerPanel({ game, player, position, onChange, onCounters }: {
         <header>
           <button className="player-name" id={`${player.id}-name`} onClick={() => {}}>{player.name}</button>
           <div className="chips">
-            {game.firstPlayerId === player.id && <span>FIRST</span>}
-            {game.activePlayerId === player.id && <span>TURN {game.turn}</span>}
             {game.monarchId === player.id && <span>MONARCH</span>}
             {game.initiativeId === player.id && <span>INITIATIVE</span>}
           </div>
@@ -141,6 +139,7 @@ export default function App() {
   const [announcement, setAnnouncement] = useState('');
   const [haptics, setHaptics] = useState(true);
   const [wakeActive, setWakeActive] = useState(false);
+  const [utilityResult, setUtilityResult] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const wakeRef = useRef<WakeLockSentinelLike | null>(null);
 
@@ -253,15 +252,7 @@ export default function App() {
         )}
         {dialog === 'tools' && (
           <>
-            <span className="eyebrow">TABLE TOOLS</span><h2>Pass the turn</h2>
-            <div className="tool-section">
-              {game.players.map((player) => (
-                <button key={player.id} className="wide-button" onClick={() => setGame(setTurn(game, player.id))}>
-                  {player.name}{game.activePlayerId === player.id ? ' · active' : ''}
-                </button>
-              ))}
-            </div>
-            <h3>Table roles</h3>
+            <span className="eyebrow">TABLE TOOLS</span><h2>Table roles</h2>
             <div className="role-grid">
               {game.players.map((player) => (
                 <button key={`monarch-${player.id}`} aria-pressed={game.monarchId === player.id}
@@ -276,9 +267,18 @@ export default function App() {
                 </button>
               ))}
             </div>
+            {utilityResult && <output className="utility-result" aria-live="polite">{utilityResult}</output>}
             <div className="utility-row">
-              <button onClick={() => setAnnouncement(`Coin: ${Math.random() < .5 ? 'heads' : 'tails'}`)}>Flip coin</button>
-              <button onClick={() => setAnnouncement(`D20: ${Math.floor(Math.random() * 20) + 1}`)}>Roll d20</button>
+              <button onClick={() => {
+                const result = `Coin: ${Math.random() < .5 ? 'heads' : 'tails'}`;
+                setUtilityResult(result);
+                setAnnouncement(result);
+              }}>Flip coin</button>
+              <button onClick={() => {
+                const result = `D20: ${Math.floor(Math.random() * 20) + 1}`;
+                setUtilityResult(result);
+                setAnnouncement(result);
+              }}>Roll d20</button>
               <button aria-pressed={wakeActive} onClick={() => void toggleWake()}>{wakeActive ? 'Screen awake' : 'Keep awake'}</button>
               <button onClick={() => void document.documentElement.requestFullscreen?.()}>Full screen</button>
               <button aria-pressed={haptics} onClick={() => setHaptics((value) => !value)}>Haptics {haptics ? 'on' : 'off'}</button>

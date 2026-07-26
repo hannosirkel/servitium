@@ -7,7 +7,7 @@ const path = require('node:path');
 // Load the immutable hero asset once during process startup.
 const heroImage = fs.readFileSync(path.join(__dirname, 'assets', 'fantasy-overlord.png'));
 const diceRoot = path.join(__dirname, '..', 'dist', 'dice');
-const chessClockRoot = path.join(__dirname, '..', 'dist', 'chess-clock');
+const chessRoot = path.join(__dirname, '..', 'dist', 'chess');
 const mtgRoot = path.join(__dirname, '..', 'dist', 'mtg');
 const mimeTypes = {
   '.css': 'text/css; charset=utf-8',
@@ -54,7 +54,7 @@ const homePage = `<!doctype html>
       <h1>Choose your table</h1>
       <nav aria-label="Applications">
         <a href="/dice/"><span class="icon" aria-hidden="true">⚄</span><span><b>Dice Hall</b><small>CAST YOUR FATE</small></span></a>
-        <a href="/chess-clock/"><span class="icon" aria-hidden="true">♞</span><span><b>Chess Clock</b><small>COMMAND THE TEMPO</small></span></a>
+        <a href="/chess/"><span class="icon" aria-hidden="true">♞</span><span><b>Chess Clock</b><small>COMMAND THE TEMPO</small></span></a>
         <a href="/mtg/"><span class="icon" aria-hidden="true">20</span><span><b>Arcane Ledger</b><small>KEEP THE TOTALS</small></span></a>
       </nav>
     </section>
@@ -114,18 +114,26 @@ function createServer() {
       }
     }
 
-    if (request.method === 'GET' && request.url === '/chess-clock') {
-      response.writeHead(308, { location: '/chess-clock/' });
+    if (request.method === 'GET'
+      && (request.url === '/chess-clock' || request.url.startsWith('/chess-clock/'))) {
+      const suffix = request.url.slice('/chess-clock'.length);
+      response.writeHead(308, { location: `/chess${suffix || '/'}` });
       response.end();
       return;
     }
 
-    if (request.method === 'GET' && request.url.startsWith('/chess-clock/')) {
-      const relativePath = request.url === '/chess-clock/'
+    if (request.method === 'GET' && request.url === '/chess') {
+      response.writeHead(308, { location: '/chess/' });
+      response.end();
+      return;
+    }
+
+    if (request.method === 'GET' && request.url.startsWith('/chess/')) {
+      const relativePath = request.url === '/chess/'
         ? 'chess-clock.html'
-        : decodeURIComponent(request.url.slice('/chess-clock/'.length).split('?')[0]);
-      const filePath = path.resolve(chessClockRoot, relativePath);
-      if (filePath.startsWith(`${chessClockRoot}${path.sep}`) && fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+        : decodeURIComponent(request.url.slice('/chess/'.length).split('?')[0]);
+      const filePath = path.resolve(chessRoot, relativePath);
+      if (filePath.startsWith(`${chessRoot}${path.sep}`) && fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
         const body = fs.readFileSync(filePath);
         const immutable = relativePath !== 'chess-clock.html';
         send(response, 200, mimeTypes[path.extname(filePath)] || 'application/octet-stream', body,
