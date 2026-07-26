@@ -7,7 +7,7 @@
     "node": ">=24.18.0"
   },
   "scripts": {
-    "build": "vite build && vite build --config vite.chess.config.ts",
+    "build": "vite build && vite build --config vite.chess.config.ts && vite build --config vite.mtg.config.ts",
     "dev": "vite",
     "format:check": "node --check src/server.js && node --check test/server.test.js && node --check test/workflows.test.js",
     "typecheck": "tsc --noEmit",

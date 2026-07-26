@@ -7,7 +7,8 @@ const path = require('node:path');
 // Load the immutable hero asset once during process startup.
 const heroImage = fs.readFileSync(path.join(__dirname, 'assets', 'fantasy-overlord.png'));
 const diceRoot = path.join(__dirname, '..', 'dist', 'dice');
-const chessClockRoot = path.join(__dirname, '..', 'dist', 'chess-clock');
+const chessRoot = path.join(__dirname, '..', 'dist', 'chess');
+const mtgRoot = path.join(__dirname, '..', 'dist', 'mtg');
 const mimeTypes = {
   '.css': 'text/css; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
@@ -34,7 +35,7 @@ const homePage = `<!doctype html>
     .content { position: relative; z-index: 1; width: min(1120px, calc(100% - 40px)); height: 100%; margin: auto; display: flex; flex-direction: column; justify-content: end; padding: 8vh 0; }
     .eyebrow { color: #dba64b; font: 600 10px Georgia, serif; letter-spacing: .28em; }
     h1 { max-width: 650px; margin: 10px 0 28px; color: #fff6df; font: 500 clamp(38px, 6vw, 76px)/.95 Georgia, serif; letter-spacing: -.035em; }
-    nav { display: grid; grid-template-columns: repeat(2, minmax(210px, 290px)); gap: 12px; }
+    nav { display: grid; grid-template-columns: repeat(3, minmax(210px, 290px)); gap: 12px; }
     a { min-height: 105px; display: flex; align-items: center; gap: 18px; padding: 18px; color: inherit; text-decoration: none; border: 1px solid #d3a8543d; background: linear-gradient(145deg, #262b30ed, #14181ded); box-shadow: 0 15px 35px #0008; transition: border-color .2s, transform .2s; }
     a:hover { border-color: #dba64b; transform: translateY(-2px); }
     a:focus-visible { outline: 2px solid #f3d28b; outline-offset: 3px; }
@@ -53,7 +54,8 @@ const homePage = `<!doctype html>
       <h1>Choose your table</h1>
       <nav aria-label="Applications">
         <a href="/dice/"><span class="icon" aria-hidden="true">⚄</span><span><b>Dice Hall</b><small>CAST YOUR FATE</small></span></a>
-        <a href="/chess-clock/"><span class="icon" aria-hidden="true">♞</span><span><b>Chess Clock</b><small>COMMAND THE TEMPO</small></span></a>
+        <a href="/chess/"><span class="icon" aria-hidden="true">♞</span><span><b>Chess Clock</b><small>COMMAND THE TEMPO</small></span></a>
+        <a href="/mtg/"><span class="icon" aria-hidden="true">20</span><span><b>Arcane Ledger</b><small>KEEP THE TOTALS</small></span></a>
       </nav>
     </section>
   </main>
@@ -112,20 +114,48 @@ function createServer() {
       }
     }
 
-    if (request.method === 'GET' && request.url === '/chess-clock') {
-      response.writeHead(308, { location: '/chess-clock/' });
+    if (request.method === 'GET'
+      && (request.url === '/chess-clock' || request.url.startsWith('/chess-clock/'))) {
+      const suffix = request.url.slice('/chess-clock'.length);
+      response.writeHead(308, { location: `/chess${suffix || '/'}` });
       response.end();
       return;
     }
 
-    if (request.method === 'GET' && request.url.startsWith('/chess-clock/')) {
-      const relativePath = request.url === '/chess-clock/'
+    if (request.method === 'GET' && request.url === '/chess') {
+      response.writeHead(308, { location: '/chess/' });
+      response.end();
+      return;
+    }
+
+    if (request.method === 'GET' && request.url.startsWith('/chess/')) {
+      const relativePath = request.url === '/chess/'
         ? 'chess-clock.html'
-        : decodeURIComponent(request.url.slice('/chess-clock/'.length).split('?')[0]);
-      const filePath = path.resolve(chessClockRoot, relativePath);
-      if (filePath.startsWith(`${chessClockRoot}${path.sep}`) && fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+        : decodeURIComponent(request.url.slice('/chess/'.length).split('?')[0]);
+      const filePath = path.resolve(chessRoot, relativePath);
+      if (filePath.startsWith(`${chessRoot}${path.sep}`) && fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
         const body = fs.readFileSync(filePath);
         const immutable = relativePath !== 'chess-clock.html';
+        send(response, 200, mimeTypes[path.extname(filePath)] || 'application/octet-stream', body,
+          immutable ? 'public, max-age=31536000, immutable' : 'no-cache');
+        return;
+      }
+    }
+
+    if (request.method === 'GET' && request.url === '/mtg') {
+      response.writeHead(308, { location: '/mtg/' });
+      response.end();
+      return;
+    }
+
+    if (request.method === 'GET' && request.url.startsWith('/mtg/')) {
+      const relativePath = request.url === '/mtg/'
+        ? 'mtg.html'
+        : decodeURIComponent(request.url.slice('/mtg/'.length).split('?')[0]);
+      const filePath = path.resolve(mtgRoot, relativePath);
+      if (filePath.startsWith(`${mtgRoot}${path.sep}`) && fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+        const body = fs.readFileSync(filePath);
+        const immutable = relativePath !== 'mtg.html';
         send(response, 200, mimeTypes[path.extname(filePath)] || 'application/octet-stream', body,
           immutable ? 'public, max-age=31536000, immutable' : 'no-cache');
         return;

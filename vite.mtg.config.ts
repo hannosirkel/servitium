@@ -2,11 +2,11 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  base: '/chess/',
+  base: '/mtg/',
   plugins: [react()],
   build: {
-    outDir: 'dist/chess',
+    outDir: 'dist/mtg',
     emptyOutDir: true,
-    rollupOptions: { input: 'chess-clock.html' },
+    rollupOptions: { input: 'mtg.html' },
   },
 });
