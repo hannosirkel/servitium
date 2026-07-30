@@ -19,6 +19,8 @@ test('validation is read-only and all actions use full SHAs', () => {
   assert.match(source, /permissions:\n  contents: read/);
   assert.doesNotMatch(source, /pull_request_target/);
   assert.doesNotMatch(source, /packages: write/);
+  assert.match(source, /npm ci/);
+  assert.match(source, /bash scripts\/validate/);
   for (const reference of source.matchAll(/uses: [^@\n]+@([^\s]+)/g)) {
     assert.match(reference[1], /^[0-9a-f]{40}$/);
   }
@@ -26,9 +28,16 @@ test('validation is read-only and all actions use full SHAs', () => {
 
 test('release splits publication from scoped GitOps promotion', () => {
   const source = workflow('release.yml');
+  const validate = source.split(/^  validate:/m)[1].split(/^  publish:/m)[0];
+  const publish = source.split(/^  publish:/m)[1].split(/^  promote:/m)[0];
   const promote = source.split(/^  promote:/m)[1];
+  assert.ok(validate, 'validate job is missing');
   assert.ok(promote, 'promote job is missing');
-  assert.match(source, /packages: write/);
+  assert.match(validate, /npm ci/);
+  assert.match(validate, /bash scripts\/validate/);
+  assert.doesNotMatch(validate, /packages: write|SERVITIUM_DEPLOYER_/);
+  assert.match(publish, /needs: validate/);
+  assert.match(publish, /packages: write/);
   assert.match(promote, /permissions: \{\}/);
   assert.match(promote, /SERVITIUM_DEPLOYER_CLIENT_ID/);
   assert.match(promote, /SERVITIUM_DEPLOYER_PRIVATE_KEY/);
@@ -51,6 +60,7 @@ test('deploy-test is an exact-SHA trusted label promotion', () => {
   assert.match(source, /Validate/);
   assert.match(source, /conclusion.*success/);
   assert.match(source, /overlays\/test/);
+  assert.match(source, /group: servitium-gitops-promotion/);
   assert.match(source, /cancel-in-progress: false/);
   assert.doesNotMatch(source.split(/^  gate:/m)[1].split(/^  build:/m)[0],
     /actions\/checkout|docker build|npm (ci|test)/);
@@ -81,11 +91,87 @@ test('test build and GitOps credentials are separated', () => {
   assert.doesNotMatch(promote, /docker build|npm (ci|test)/);
 });
 
+test('promotion credentials are scoped to their GitHub Environments', () => {
+  const release = workflow('release.yml');
+  const releaseValidate = release.split(/^  validate:/m)[1].split(/^  publish:/m)[0];
+  const releasePublish = release.split(/^  publish:/m)[1].split(/^  promote:/m)[0];
+  const releasePromote = release.split(/^  promote:/m)[1];
+  assert.doesNotMatch(releaseValidate, /environment:|SERVITIUM_DEPLOYER_/);
+  assert.doesNotMatch(releasePublish, /environment:|SERVITIUM_DEPLOYER_/);
+  assert.match(releasePromote, /environment: live/);
+  assert.match(releasePromote, /SERVITIUM_DEPLOYER_/);
+
+  const deploy = workflow('deploy-test.yml');
+  for (const job of ['gate', 'build', 'recheck']) {
+    const body = deploy.split(new RegExp(`^  ${job}:`, 'm'))[1]
+      .split(/^  (?:gate|build|recheck|promote):/m)[0];
+    assert.doesNotMatch(body, /environment:|SERVITIUM_DEPLOYER_/);
+  }
+  const testPromote = deploy.split(/^  promote:/m)[1];
+  assert.match(testPromote, /environment: test/);
+  assert.match(testPromote, /SERVITIUM_DEPLOYER_/);
+});
+
+test('the human owner owns all changes including CODEOWNERS', () => {
+  const source = fs.readFileSync(
+    path.join(repository, 'CODEOWNERS'),
+    'utf8',
+  );
+  assert.match(source, /^\* @hannosirkel$/m);
+  assert.match(source, /^\/CODEOWNERS @hannosirkel$/m);
+});
+
 test('live release updates only the live overlay', () => {
   const source = workflow('release.yml');
   assert.match(source, /push:\n    branches:\n      - main/);
-  assert.match(source, /overlays\/live/);
-  assert.doesNotMatch(source, /overlays\/test/);
+  assert.match(source, /"\$guard" "\$IMAGE_DIGEST" "\$GITHUB_WORKSPACE\/gitops\/overlays\/live"/);
+  assert.match(source, /git add overlays\/live\/kustomization\.yaml/);
+  assert.doesNotMatch(source, /git add overlays\/test\/kustomization\.yaml/);
+  assert.match(source, /group: servitium-gitops-promotion/);
+});
+
+test('GitOps promotions validate both overlays before pushing exact paths', () => {
+  for (const name of ['release.yml', 'deploy-test.yml']) {
+    const source = workflow(name);
+    const commit = source.split(/- name: Commit and push the GitOps update/)[1];
+    assert.ok(commit, `${name} promotion step is missing`);
+    const tests = commit.indexOf('bash tests/manifests.sh');
+    const live = commit.indexOf('kubectl kustomize overlays/live');
+    const testOverlay = commit.indexOf('kubectl kustomize overlays/test');
+    const diff = commit.indexOf('git diff --check');
+    const push = commit.indexOf('git push');
+    assert.ok(tests >= 0 && tests < push, `${name} must run manifest tests before push`);
+    assert.ok(live >= 0 && live < push, `${name} must render live before push`);
+    assert.ok(testOverlay >= 0 && testOverlay < push, `${name} must render test before push`);
+    assert.ok(diff >= 0 && diff < push, `${name} must check diffs before push`);
+    assert.match(commit, /git diff --cached --name-only \| grep -qx 'overlays\/(live|test)\/kustomization\.yaml'/);
+    assert.doesNotMatch(commit, /--force|git rebase/);
+  }
+});
+
+test('published images carry attestations and pass a digest scan before promotion', () => {
+  for (const name of ['release.yml', 'deploy-test.yml']) {
+    const source = workflow(name);
+    assert.match(source, /--provenance=mode=min/);
+    assert.match(source, /--sbom=true/);
+    assert.doesNotMatch(source, /--provenance=false/);
+    assert.match(source,
+      /aquasecurity\/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25/);
+    assert.match(source, /image-ref: ghcr\.io\/hannosirkel\/servitium@\$\{\{ steps\.build\.outputs\.digest \}\}/);
+    assert.match(source, /severity: CRITICAL/);
+    assert.match(source, /ignore-unfixed: true/);
+    assert.match(source, /exit-code: '1'/);
+    assert.match(source,
+      /actions\/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02/);
+    assert.match(source, /retention-days: 7/);
+    const scan = source.indexOf('aquasecurity/trivy-action@');
+    const promote = source.indexOf('\n  promote:');
+    assert.ok(scan >= 0 && scan < promote,
+      `${name} must scan the immutable digest before promotion`);
+    for (const reference of source.matchAll(/uses: [^@\n]+@([^\s]+)/g)) {
+      assert.match(reference[1], /^[0-9a-f]{40}$/);
+    }
+  }
 });
 
 test('Discord notifications are read-only and limited to authoritative events', () => {

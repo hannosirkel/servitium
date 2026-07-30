@@ -5,17 +5,12 @@ This file guides coding agents working in this repository.
 ## Commands
 
 ```bash
-npm install
-npm run typecheck
-npm run test:unit
-npm run build
-npm test
-npm run format:check
-bash test/container.test.sh
+npm ci
+bash scripts/validate
 ```
 
-Run focused tests while developing, then the complete relevant validation
-before handoff.
+Install dependencies separately, run focused tests while developing, then use
+the canonical validation command before handoff.
 
 ## Workflow
 

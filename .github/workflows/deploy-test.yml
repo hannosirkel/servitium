@@ -8,7 +8,7 @@ name: Deploy Test
     types: [labeled]
 
 concurrency:
-  group: servitium-test-deploy
+  group: servitium-gitops-promotion
   cancel-in-progress: false
 
 jobs:
@@ -131,12 +131,37 @@ jobs:
         run: |
           set -euo pipefail
           metadata="$RUNNER_TEMP/build-metadata.json"
-          docker buildx build --platform linux/amd64 --provenance=false \
+          docker buildx build --platform linux/amd64 \
+            --provenance=mode=min --sbom=true \
             --tag "${IMAGE}:pr-${PR_NUMBER}-sha-${HEAD_SHA}" \
             --push --metadata-file "$metadata" .
           digest="$(jq -er '."containerimage.digest"' "$metadata")"
           printf '%s' "$digest" | grep -Eq '^sha256:[0-9a-f]{64}$'
           echo "digest=$digest" >>"$GITHUB_OUTPUT"
+
+      - name: Scan the published immutable digest
+        # aquasecurity/trivy-action v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          image-ref: ghcr.io/hannosirkel/servitium@${{ steps.build.outputs.digest }}
+          format: json
+          output: trivy-results.json
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL
+          scanners: vuln
+          version: v0.70.0
+
+      - name: Retain the vulnerability report
+        if: always()
+        # actions/upload-artifact v4.6.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: trivy-test-${{ needs.gate.outputs.head_sha }}
+          path: trivy-results.json
+          if-no-files-found: error
+          retention-days: 7
 
   recheck:
     needs: [gate, build]
@@ -167,6 +192,7 @@ jobs:
   promote:
     needs: [gate, build, recheck]
     runs-on: ubuntu-24.04
+    environment: test
     permissions: {}
     env:
       HEAD_SHA: ${{ needs.gate.outputs.head_sha }}
@@ -245,6 +271,10 @@ jobs:
           git config user.name 'servitium-deployer[bot]'
           git config user.email \
             'servitium-deployer[bot]@users.noreply.github.com'
+          bash tests/manifests.sh
+          kubectl kustomize overlays/live >/dev/null
+          kubectl kustomize overlays/test >/dev/null
+          git diff --check
           git add overlays/test/kustomization.yaml
           git diff --cached --name-only | grep -qx 'overlays/test/kustomization.yaml'
           git diff --cached --check

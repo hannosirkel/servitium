@@ -7,11 +7,30 @@ name: Release
       - main
 
 concurrency:
-  group: servitium-release
+  group: servitium-gitops-promotion
   cancel-in-progress: false
 
 jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the release revision
+        # actions/checkout v4.2.2
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run canonical validation
+        run: bash scripts/validate
+
   publish:
+    needs: validate
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -39,12 +58,37 @@ jobs:
         run: |
           set -euo pipefail
           metadata="$RUNNER_TEMP/build-metadata.json"
-          docker buildx build --platform linux/amd64 --provenance=false \
+          docker buildx build --platform linux/amd64 \
+            --provenance=mode=min --sbom=true \
             --tag "${IMAGE}:sha-${GITHUB_SHA}" --push \
             --metadata-file "$metadata" .
           digest="$(jq -er '."containerimage.digest"' "$metadata")"
           printf '%s' "$digest" | grep -Eq '^sha256:[0-9a-f]{64}$'
           echo "digest=$digest" >>"$GITHUB_OUTPUT"
+
+      - name: Scan the published immutable digest
+        # aquasecurity/trivy-action v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          image-ref: ghcr.io/hannosirkel/servitium@${{ steps.build.outputs.digest }}
+          format: json
+          output: trivy-results.json
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL
+          scanners: vuln
+          version: v0.70.0
+
+      - name: Retain the vulnerability report
+        if: always()
+        # actions/upload-artifact v4.6.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: trivy-live-${{ github.sha }}
+          path: trivy-results.json
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Transfer the reviewed digest guard
         id: guard
@@ -56,6 +100,7 @@ jobs:
   promote:
     needs: publish
     runs-on: ubuntu-24.04
+    environment: live
     permissions: {}
     env:
       APP_CLIENT_ID: ${{ secrets.SERVITIUM_DEPLOYER_CLIENT_ID }}
@@ -131,6 +176,10 @@ jobs:
           git config user.name 'servitium-deployer[bot]'
           git config user.email \
             'servitium-deployer[bot]@users.noreply.github.com'
+          bash tests/manifests.sh
+          kubectl kustomize overlays/live >/dev/null
+          kubectl kustomize overlays/test >/dev/null
+          git diff --check
           git add overlays/live/kustomization.yaml
           git diff --cached --name-only | grep -qx 'overlays/live/kustomization.yaml'
           git diff --cached --check

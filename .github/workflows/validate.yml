@@ -20,23 +20,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Run application and delivery tests
-        run: |
-          set -euo pipefail
-          npm test
-          npm run format:check
-          bash test/container.test.sh
-          bash test/update-gitops-digest.test.sh
+      - name: Install locked dependencies
+        run: npm ci
 
-      - name: Build and test the pinned container
+      - name: Run canonical validation
         run: |
           set -euo pipefail
-          docker build --tag servitium:test .
-          docker run --rm --read-only --cap-drop=ALL \
-            --security-opt=no-new-privileges \
-            --volume "$PWD/test:/app/test:ro" \
-            --entrypoint node servitium:test \
-            --test /app/test/server.test.js
+          bash scripts/validate
 
       - name: Download pinned gitleaks
         env:
