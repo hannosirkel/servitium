@@ -26,10 +26,24 @@ database, account system, or server-side application state.
 
 ## Build and validation
 
-`npm run build` builds Dice Hall, Chess Clock, and Arcane Ledger. TypeScript and
-Vitest cover frontend logic and components; Node tests cover routes and
-delivery workflow contracts. `test/container.test.sh` protects the container
-runtime contract.
+After `npm ci`, `bash scripts/validate` is the canonical local and CI
+validation entry point. It checks formatting and syntax, TypeScript, Vitest and
+Node tests, all frontend builds, the container runtime contract, and the
+digest-update guard. Dependency installation remains separate so repeated
+validation does not reinstall packages.
+
+Pull requests and pushes to `main` run the same command. A release validates
+the exact pushed revision before package-write permission is granted. Test and
+live promotions serialize writes to the GitOps repository, update only their
+exact overlay path, render both overlays, and check the Git diff before an
+ordinary non-force push.
+
+Test and live builds attach minimum BuildKit provenance and an OCI SBOM to the
+pushed GHCR image. A pinned Trivy action scans that immutable digest before
+promotion, fails on fixed CRITICAL vulnerabilities, and ignores findings with
+no available fix. The vulnerability-only JSON report is retained for seven
+days. Weekly Dependabot checks keep npm, the Docker base image, and GitHub
+Actions separately reviewable; routine development dependencies are grouped.
 
 The repository ships a fail-closed `.githooks/pre-commit` hook that scans
 staged changes with gitleaks. Checkout provisioning owns the `core.hooksPath`

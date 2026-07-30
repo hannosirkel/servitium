@@ -22,10 +22,14 @@ provides a full-screen control.
 ## Development
 
 ```bash
-npm install
-npm run build
-npm run typecheck
-npm run test:unit
-npm test
+npm ci
+bash scripts/validate
 HOST=127.0.0.1 PORT=8099 npm start
 ```
+
+Dependency installation is intentionally separate so repeated validation does
+not reinstall packages.
+
+Published test and live images carry minimum provenance and an OCI SBOM. Their
+immutable digest must pass the fixed-CRITICAL vulnerability gate before the
+corresponding GitOps promotion.
