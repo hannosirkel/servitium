@@ -21,6 +21,7 @@ WORKDIR /app
 COPY --chown=10001:10001 package.json ./
 COPY --chown=10001:10001 src ./src
 COPY --from=0 --chown=10001:10001 /build/dist ./dist
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 
 USER 10001:10001
 EXPOSE 8099
