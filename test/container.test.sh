@@ -9,5 +9,6 @@ expected_from='FROM node:24.18.0-bookworm-slim@sha256:6f7b03f7c2c8e2e784dcf92954
 grep -qx 'USER 10001:10001' "$dockerfile"
 grep -qx 'EXPOSE 8099' "$dockerfile"
 grep -q 'CMD \["node", "src/server.js"\]' "$dockerfile"
+grep -Fqx 'RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx' "$dockerfile"
 
 echo "container contract tests passed"

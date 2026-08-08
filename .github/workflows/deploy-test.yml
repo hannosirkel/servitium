@@ -118,7 +118,7 @@ jobs:
 
       - name: Set up the attestation-capable Buildx driver
         # docker/setup-buildx-action v3
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c
 
       - name: Authenticate to GHCR
         env:
@@ -160,7 +160,7 @@ jobs:
       - name: Retain the vulnerability report
         if: ${{ always() && hashFiles('trivy-results.json') != '' }}
         # actions/upload-artifact v4.6.2
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: trivy-test-${{ needs.gate.outputs.head_sha }}
           path: trivy-results.json
