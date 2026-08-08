@@ -156,7 +156,7 @@ test('published images carry attestations and pass a digest scan before promotio
     assert.match(source, /--sbom=true/);
     assert.doesNotMatch(source, /--provenance=false/);
     assert.match(source,
-      /docker\/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f/);
+      /docker\/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c/);
     assert.match(source,
       /aquasecurity\/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25/);
     assert.match(source, /image-ref: ghcr\.io\/hannosirkel\/servitium@\$\{\{ steps\.build\.outputs\.digest \}\}/);
@@ -164,7 +164,7 @@ test('published images carry attestations and pass a digest scan before promotio
     assert.match(source, /ignore-unfixed: true/);
     assert.match(source, /exit-code: '1'/);
     assert.match(source,
-      /actions\/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02/);
+      /actions\/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/);
     assert.match(source,
       /if: \$\{\{ always\(\) && hashFiles\('trivy-results\.json'\) != '' \}\}/);
     assert.match(source, /retention-days: 7/);
