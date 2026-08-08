@@ -37,27 +37,27 @@ write_kustomization() {
 write_fixture() {
   local repository="$1"
   local test_digest_lines="${2:-1}"
-  write_kustomization "$repository/overlays/live"
-  write_kustomization "$repository/overlays/test" "$test_digest_lines"
+  write_kustomization "$repository/servitium/overlays/live"
+  write_kustomization "$repository/servitium/overlays/test" "$test_digest_lines"
   git -C "$repository" init --quiet --initial-branch=main
   git -C "$repository" config user.name test
   git -C "$repository" config user.email test@example.invalid
-  git -C "$repository" add overlays
+  git -C "$repository" add servitium
   git -C "$repository" commit --quiet -m fixture
 }
 
 valid="$test_root/valid"
 write_fixture "$valid"
-chmod 640 "$valid/overlays/test/kustomization.yaml"
-valid_metadata="$(metadata_of "$valid/overlays/test/kustomization.yaml")"
-"$helper" "$new_digest" "$valid/overlays/test"
-[[ "$(git -C "$valid" diff --name-only)" == 'overlays/test/kustomization.yaml' ]]
-[[ "$(git -C "$valid" diff --numstat)" == $'1\t1\toverlays/test/kustomization.yaml' ]]
-[[ "$(grep -c "digest: $new_digest" "$valid/overlays/test/kustomization.yaml")" -eq 1 ]]
-[[ "$(grep -c "digest: $old_digest" "$valid/overlays/live/kustomization.yaml")" -eq 1 ]]
+chmod 640 "$valid/servitium/overlays/test/kustomization.yaml"
+valid_metadata="$(metadata_of "$valid/servitium/overlays/test/kustomization.yaml")"
+"$helper" "$new_digest" "$valid/servitium/overlays/test"
+[[ "$(git -C "$valid" diff --name-only)" == 'servitium/overlays/test/kustomization.yaml' ]]
+[[ "$(git -C "$valid" diff --numstat)" == $'1\t1\tservitium/overlays/test/kustomization.yaml' ]]
+[[ "$(grep -c "digest: $new_digest" "$valid/servitium/overlays/test/kustomization.yaml")" -eq 1 ]]
+[[ "$(grep -c "digest: $old_digest" "$valid/servitium/overlays/live/kustomization.yaml")" -eq 1 ]]
 [[ "$(git -C "$valid" diff --unified=0 | grep -c "^-    digest: $old_digest")" -eq 1 ]]
 [[ "$(git -C "$valid" diff --unified=0 | grep -c "^+    digest: $new_digest")" -eq 1 ]]
-[[ "$(metadata_of "$valid/overlays/test/kustomization.yaml")" == "$valid_metadata" ]]
+[[ "$(metadata_of "$valid/servitium/overlays/test/kustomization.yaml")" == "$valid_metadata" ]]
 
 race="$test_root/race"
 write_fixture "$race"
@@ -72,12 +72,12 @@ printf '%s\n' \
   'exec "$GITOPS_REAL_NODE" "$@"' >"$race_bin/node"
 chmod +x "$race_bin/node"
 if PATH="$race_bin:$PATH" GITOPS_REAL_NODE="$real_node" \
-  GITOPS_TEST_TARGET="$race/overlays/test/kustomization.yaml" \
-  "$helper" "$new_digest" "$race/overlays/test" >/dev/null 2>&1; then
+  GITOPS_TEST_TARGET="$race/servitium/overlays/test/kustomization.yaml" \
+  "$helper" "$new_digest" "$race/servitium/overlays/test" >/dev/null 2>&1; then
   echo 'same-target race unexpectedly accepted' >&2
   exit 1
 fi
-if ! grep -q 'deployment-race.yaml' "$race/overlays/test/kustomization.yaml"; then
+if ! grep -q 'deployment-race.yaml' "$race/servitium/overlays/test/kustomization.yaml"; then
   echo 'same-target race edit was overwritten' >&2
   exit 1
 fi
@@ -94,29 +94,49 @@ fi
 
 unexpected="$test_root/unexpected"
 write_fixture "$unexpected"
-write_kustomization "$unexpected/overlays/preview"
-git -C "$unexpected" add overlays/preview/kustomization.yaml
+write_kustomization "$unexpected/servitium/overlays/preview"
+git -C "$unexpected" add servitium/overlays/preview/kustomization.yaml
 git -C "$unexpected" commit --quiet -m preview
-if "$helper" "$new_digest" "$unexpected/overlays/preview" >/dev/null 2>&1; then
+if "$helper" "$new_digest" "$unexpected/servitium/overlays/preview" >/dev/null 2>&1; then
   echo 'unexpected overlay unexpectedly accepted' >&2
   exit 1
 fi
 
-if "$helper" "$new_digest" "$valid/overlays/test" extra >/dev/null 2>&1; then
+legacy="$test_root/legacy"
+write_fixture "$legacy"
+write_kustomization "$legacy/overlays/test"
+git -C "$legacy" add overlays/test/kustomization.yaml
+git -C "$legacy" commit --quiet -m legacy-overlay
+if "$helper" "$new_digest" "$legacy/overlays/test" >/dev/null 2>&1; then
+  echo 'legacy root overlay unexpectedly accepted' >&2
+  exit 1
+fi
+
+unrelated="$test_root/unrelated"
+write_fixture "$unrelated"
+write_kustomization "$unrelated/otherapp/overlays/test"
+git -C "$unrelated" add otherapp/overlays/test/kustomization.yaml
+git -C "$unrelated" commit --quiet -m unrelated-overlay
+if "$helper" "$new_digest" "$unrelated/otherapp/overlays/test" >/dev/null 2>&1; then
+  echo 'unrelated application overlay unexpectedly accepted' >&2
+  exit 1
+fi
+
+if "$helper" "$new_digest" "$valid/servitium/overlays/test" extra >/dev/null 2>&1; then
   echo 'extra helper argument unexpectedly accepted' >&2
   exit 1
 fi
 
 malformed="$test_root/malformed"
 write_fixture "$malformed"
-if "$helper" 'sha256:not-a-digest' "$malformed/overlays/test" >/dev/null 2>&1; then
+if "$helper" 'sha256:not-a-digest' "$malformed/servitium/overlays/test" >/dev/null 2>&1; then
   echo 'malformed digest unexpectedly accepted' >&2
   exit 1
 fi
 
 missing="$test_root/missing"
 write_fixture "$missing"
-if "$helper" "$new_digest" "$missing/overlays/missing" >/dev/null 2>&1; then
+if "$helper" "$new_digest" "$missing/servitium/overlays/missing" >/dev/null 2>&1; then
   echo 'missing image digest unexpectedly accepted' >&2
   exit 1
 fi
@@ -124,17 +144,17 @@ fi
 duplicate="$test_root/duplicate"
 write_fixture "$duplicate" 2
 duplicate_original="$test_root/duplicate-original.yaml"
-cp "$duplicate/overlays/test/kustomization.yaml" "$duplicate_original"
-duplicate_inode="$(inode_of "$duplicate/overlays/test/kustomization.yaml")"
-if "$helper" "$new_digest" "$duplicate/overlays/test" >/dev/null 2>&1; then
+cp "$duplicate/servitium/overlays/test/kustomization.yaml" "$duplicate_original"
+duplicate_inode="$(inode_of "$duplicate/servitium/overlays/test/kustomization.yaml")"
+if "$helper" "$new_digest" "$duplicate/servitium/overlays/test" >/dev/null 2>&1; then
   echo 'duplicate image digest unexpectedly accepted' >&2
   exit 1
 fi
-if ! cmp -s "$duplicate_original" "$duplicate/overlays/test/kustomization.yaml"; then
+if ! cmp -s "$duplicate_original" "$duplicate/servitium/overlays/test/kustomization.yaml"; then
   echo 'duplicate digest rejection changed kustomization bytes' >&2
   exit 1
 fi
-if [[ "$(inode_of "$duplicate/overlays/test/kustomization.yaml")" != "$duplicate_inode" ]]; then
+if [[ "$(inode_of "$duplicate/servitium/overlays/test/kustomization.yaml")" != "$duplicate_inode" ]]; then
   echo 'duplicate digest rejection changed kustomization inode' >&2
   exit 1
 fi
@@ -142,28 +162,28 @@ fi
 empty="$test_root/empty"
 write_fixture "$empty" 0
 empty_original="$test_root/empty-original.yaml"
-cp "$empty/overlays/test/kustomization.yaml" "$empty_original"
-empty_inode="$(inode_of "$empty/overlays/test/kustomization.yaml")"
-if "$helper" "$new_digest" "$empty/overlays/test" >/dev/null 2>&1; then
+cp "$empty/servitium/overlays/test/kustomization.yaml" "$empty_original"
+empty_inode="$(inode_of "$empty/servitium/overlays/test/kustomization.yaml")"
+if "$helper" "$new_digest" "$empty/servitium/overlays/test" >/dev/null 2>&1; then
   echo 'empty overlay digest unexpectedly accepted' >&2
   exit 1
 fi
-if ! cmp -s "$empty_original" "$empty/overlays/test/kustomization.yaml"; then
+if ! cmp -s "$empty_original" "$empty/servitium/overlays/test/kustomization.yaml"; then
   echo 'empty overlay rejection changed kustomization' >&2
   exit 1
 fi
-if [[ "$(inode_of "$empty/overlays/test/kustomization.yaml")" != "$empty_inode" ]]; then
+if [[ "$(inode_of "$empty/servitium/overlays/test/kustomization.yaml")" != "$empty_inode" ]]; then
   echo 'empty overlay rejection changed kustomization inode' >&2
   exit 1
 fi
 
 symlink="$test_root/symlink"
 write_fixture "$symlink"
-mv "$symlink/overlays/test/kustomization.yaml" "$symlink/overlays/test/kustomization-target.yaml"
-ln -s kustomization-target.yaml "$symlink/overlays/test/kustomization.yaml"
-git -C "$symlink" add --all overlays/test
+mv "$symlink/servitium/overlays/test/kustomization.yaml" "$symlink/servitium/overlays/test/kustomization-target.yaml"
+ln -s kustomization-target.yaml "$symlink/servitium/overlays/test/kustomization.yaml"
+git -C "$symlink" add --all servitium/overlays/test
 git -C "$symlink" commit --quiet -m symlinked-kustomization
-if "$helper" "$new_digest" "$symlink/overlays/test" >/dev/null 2>&1; then
+if "$helper" "$new_digest" "$symlink/servitium/overlays/test" >/dev/null 2>&1; then
   echo 'symlinked kustomization unexpectedly accepted' >&2
   exit 1
 fi
@@ -171,8 +191,8 @@ fi
 hardlinked="$test_root/hardlinked"
 write_fixture "$hardlinked"
 hardlink_target="$test_root/hardlink-target.yaml"
-ln "$hardlinked/overlays/test/kustomization.yaml" "$hardlink_target"
-if "$helper" "$new_digest" "$hardlinked/overlays/test" >/dev/null 2>&1; then
+ln "$hardlinked/servitium/overlays/test/kustomization.yaml" "$hardlink_target"
+if "$helper" "$new_digest" "$hardlinked/servitium/overlays/test" >/dev/null 2>&1; then
   echo 'hard-linked kustomization unexpectedly accepted' >&2
   exit 1
 fi
@@ -184,7 +204,7 @@ fi
 dirty="$test_root/dirty"
 write_fixture "$dirty"
 printf '%s\n' 'unrelated change' >"$dirty/second-file.txt"
-if "$helper" "$new_digest" "$dirty/overlays/test" >/dev/null 2>&1; then
+if "$helper" "$new_digest" "$dirty/servitium/overlays/test" >/dev/null 2>&1; then
   echo 'dirty checkout unexpectedly accepted' >&2
   exit 1
 fi
@@ -195,7 +215,7 @@ printf '%s\n' 'unchanged' >"$rollback/sentinel.txt"
 git -C "$rollback" add sentinel.txt
 git -C "$rollback" commit --quiet -m sentinel
 rollback_original="$test_root/rollback-original.yaml"
-cp "$rollback/overlays/test/kustomization.yaml" "$rollback_original"
+cp "$rollback/servitium/overlays/test/kustomization.yaml" "$rollback_original"
 test_bin="$test_root/test-bin"
 mkdir "$test_bin"
 printf '%s\n' \
@@ -207,11 +227,11 @@ printf '%s\n' \
 chmod +x "$test_bin/git"
 if PATH="$test_bin:$PATH" GITOPS_REAL_GIT="$(command -v git)" \
   GITOPS_TEST_MUTATION_FILE="$rollback/sentinel.txt" \
-  "$helper" "$new_digest" "$rollback/overlays/test" >/dev/null 2>&1; then
+  "$helper" "$new_digest" "$rollback/servitium/overlays/test" >/dev/null 2>&1; then
   echo 'post-write concurrent mutation unexpectedly accepted' >&2
   exit 1
 fi
-if ! cmp -s "$rollback_original" "$rollback/overlays/test/kustomization.yaml"; then
+if ! cmp -s "$rollback_original" "$rollback/servitium/overlays/test/kustomization.yaml"; then
   echo 'failed update changed kustomization' >&2
   exit 1
 fi
@@ -234,18 +254,18 @@ printf '%s\n' \
 chmod +x "$directory_test_bin/git"
 directory_output="$test_root/directory-replacement-output.txt"
 if PATH="$directory_test_bin:$PATH" GITOPS_REAL_GIT="$(command -v git)" \
-  GITOPS_TEST_TARGET="$directory_replacement/overlays/test/kustomization.yaml" \
-  "$helper" "$new_digest" "$directory_replacement/overlays/test" \
+  GITOPS_TEST_TARGET="$directory_replacement/servitium/overlays/test/kustomization.yaml" \
+  "$helper" "$new_digest" "$directory_replacement/servitium/overlays/test" \
   >"$directory_output" 2>&1; then
   echo 'target-directory replacement unexpectedly accepted' >&2
   exit 1
 fi
-if [[ ! -d "$directory_replacement/overlays/test/kustomization.yaml" ]]; then
+if [[ ! -d "$directory_replacement/servitium/overlays/test/kustomization.yaml" ]]; then
   echo 'target-directory replacement was overwritten' >&2
   exit 1
 fi
 shopt -s nullglob
-recovery_snapshots=("$directory_replacement/overlays/test"/.update-gitops-digest.*)
+recovery_snapshots=("$directory_replacement/servitium/overlays/test"/.update-gitops-digest.*)
 shopt -u nullglob
 if [[ "${#recovery_snapshots[@]}" -eq 0 ]]; then
   echo 'target-directory failure did not preserve a recovery snapshot' >&2

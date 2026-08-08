@@ -42,7 +42,7 @@ case "$overlay" in
     ;;
 esac
 case "$relative_overlay" in
-  overlays/live|overlays/test) ;;
+  servitium/overlays/live|servitium/overlays/test) ;;
   *)
     echo 'digest update rejected: overlay is not permitted' >&2
     exit 1
