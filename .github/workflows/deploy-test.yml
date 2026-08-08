@@ -275,7 +275,7 @@ jobs:
           git config user.name 'servitium-deployer[bot]'
           git config user.email \
             'servitium-deployer[bot]@users.noreply.github.com'
-          bash tests/manifests.sh
+          bash servitium/tests/manifests.sh
           kubectl kustomize servitium/overlays/live >/dev/null
           kubectl kustomize servitium/overlays/test >/dev/null
           git diff --check

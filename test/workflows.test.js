@@ -135,7 +135,7 @@ test('GitOps promotions validate both overlays before pushing exact paths', () =
     const source = workflow(name);
     const commit = source.split(/- name: Commit and push the GitOps update/)[1];
     assert.ok(commit, `${name} promotion step is missing`);
-    const tests = commit.indexOf('bash tests/manifests.sh');
+    const tests = commit.indexOf('bash servitium/tests/manifests.sh');
     const live = commit.indexOf('kubectl kustomize servitium/overlays/live');
     const testOverlay = commit.indexOf('kubectl kustomize servitium/overlays/test');
     const diff = commit.indexOf('git diff --check');
