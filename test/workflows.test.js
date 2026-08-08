@@ -41,7 +41,7 @@ test('release splits publication from scoped GitOps promotion', () => {
   assert.match(promote, /permissions: \{\}/);
   assert.match(promote, /SERVITIUM_DEPLOYER_CLIENT_ID/);
   assert.match(promote, /SERVITIUM_DEPLOYER_PRIVATE_KEY/);
-  assert.match(promote, /repository: hannosirkel\/servitium-main/);
+  assert.match(promote, /repository: hannosirkel\/deploys/);
   assert.doesNotMatch(promote, /repository: hannosirkel\/servitium\s/);
   assert.match(promote, /update-gitops-digest\.sh/);
   for (const reference of source.matchAll(/uses: [^@\n]+@([^\s]+)/g)) {
@@ -59,7 +59,7 @@ test('deploy-test is an exact-SHA trusted label promotion', () => {
   assert.match(source, /github\.event\.pull_request\.head\.repo\.full_name/);
   assert.match(source, /Validate/);
   assert.match(source, /conclusion.*success/);
-  assert.match(source, /overlays\/test/);
+  assert.match(source, /servitium\/overlays\/test/);
   assert.match(source, /group: servitium-gitops-promotion/);
   assert.match(source, /cancel-in-progress: false/);
   assert.doesNotMatch(source.split(/^  gate:/m)[1].split(/^  build:/m)[0],
@@ -87,7 +87,7 @@ test('test build and GitOps credentials are separated', () => {
   assert.match(build, /persist-credentials: false/);
   assert.doesNotMatch(build, /SERVITIUM_DEPLOYER_PRIVATE_KEY/);
   assert.match(promote, /SERVITIUM_DEPLOYER_PRIVATE_KEY/);
-  assert.match(promote, /repository: hannosirkel\/servitium-main/);
+  assert.match(promote, /repository: hannosirkel\/deploys/);
   assert.doesNotMatch(promote, /docker build|npm (ci|test)/);
 });
 
@@ -124,9 +124,9 @@ test('the human owner owns all changes including CODEOWNERS', () => {
 test('live release updates only the live overlay', () => {
   const source = workflow('release.yml');
   assert.match(source, /push:\n    branches:\n      - main/);
-  assert.match(source, /"\$guard" "\$IMAGE_DIGEST" "\$GITHUB_WORKSPACE\/gitops\/overlays\/live"/);
-  assert.match(source, /git add overlays\/live\/kustomization\.yaml/);
-  assert.doesNotMatch(source, /git add overlays\/test\/kustomization\.yaml/);
+  assert.match(source, /"\$guard" "\$IMAGE_DIGEST" "\$GITHUB_WORKSPACE\/gitops\/servitium\/overlays\/live"/);
+  assert.match(source, /git add servitium\/overlays\/live\/kustomization\.yaml/);
+  assert.doesNotMatch(source, /git add servitium\/overlays\/test\/kustomization\.yaml/);
   assert.match(source, /group: servitium-gitops-promotion/);
 });
 
@@ -136,15 +136,15 @@ test('GitOps promotions validate both overlays before pushing exact paths', () =
     const commit = source.split(/- name: Commit and push the GitOps update/)[1];
     assert.ok(commit, `${name} promotion step is missing`);
     const tests = commit.indexOf('bash tests/manifests.sh');
-    const live = commit.indexOf('kubectl kustomize overlays/live');
-    const testOverlay = commit.indexOf('kubectl kustomize overlays/test');
+    const live = commit.indexOf('kubectl kustomize servitium/overlays/live');
+    const testOverlay = commit.indexOf('kubectl kustomize servitium/overlays/test');
     const diff = commit.indexOf('git diff --check');
     const push = commit.indexOf('git push');
     assert.ok(tests >= 0 && tests < push, `${name} must run manifest tests before push`);
     assert.ok(live >= 0 && live < push, `${name} must render live before push`);
     assert.ok(testOverlay >= 0 && testOverlay < push, `${name} must render test before push`);
     assert.ok(diff >= 0 && diff < push, `${name} must check diffs before push`);
-    assert.match(commit, /git diff --cached --name-only \| grep -qx 'overlays\/(live|test)\/kustomization\.yaml'/);
+    assert.match(commit, /git diff --cached --name-only \| grep -qx 'servitium\/overlays\/(live|test)\/kustomization\.yaml'/);
     assert.doesNotMatch(commit, /--force|git rebase/);
   }
 });
