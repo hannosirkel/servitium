@@ -7,7 +7,7 @@ export default defineConfig({
   build: { outDir: 'dist/dice', emptyOutDir: true },
   test: {
     environment: 'jsdom',
-    setupFiles: ['./src/dice/testSetup.ts', './src/chess-clock/testSetup.ts', './src/mtg/testSetup.ts'],
+    setupFiles: ['./src/dice/testSetup.ts', './src/chess-clock/testSetup.ts', './src/mtg/testSetup.ts', './src/ludus/testSetup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
   },
 });
