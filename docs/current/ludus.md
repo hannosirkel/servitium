@@ -20,10 +20,12 @@ legal slot-removal certificate, then assigns matching tile pairs to that
 sequence. Shuffling preserves occupied slots and the remaining tile multiset
 while constructing a new certificate.
 
-Hint, unlimited Undo, Shuffle, Restart, zoom, fit, and Help are available.
+Hint, unlimited Undo, Shuffle, Restart, pinch-to-zoom, explicit zoom and fit,
+and Help are available.
 Blocked tiles are disabled; free tiles are keyboard-operable native buttons
 with descriptive labels. Status changes use a polite live region. The board
-uses native panning when it exceeds the viewport, retains visible focus, and
+uses native one-finger panning when it exceeds the viewport, keeps the board
+point between two fingers stable while pinching, retains visible focus, and
 honours reduced-motion preferences.
 
 Current game state, generator inputs, assignment, removal history, active

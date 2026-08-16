@@ -70,15 +70,56 @@ function StartScreen({ saved, onContinue, onStart, onDaily, onBack, openDialog }
   </main>;
 }
 
-function Board({ game, settings, zoom, hintPair, onTile, tileRefs }: {
+function Board({ game, settings, zoom, hintPair, onTile, onZoom, tileRefs }: {
   game: MahjongGame; settings: Settings; zoom: number; hintPair: string[]; onTile: (id: string) => void;
+  onZoom: (zoom: number) => void;
   tileRefs: React.MutableRefObject<Record<string, HTMLButtonElement | null>>;
 }) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{ distance: number; zoom: number; contentX: number; contentY: number } | null>(null);
+  const suppressClick = useRef(false);
   const layout = getLayout(game.layoutId); const occupied = new Set(game.remaining);
   const free = new Set(freeSlots(layout, occupied).map((slot) => slot.id));
   const maxX = Math.max(...layout.slots.map((slot) => slot.x)) + 2; const maxY = Math.max(...layout.slots.map((slot) => slot.y)) + 2;
   const unitX = 31 * zoom; const unitY = 38 * zoom; const layer = 5 * zoom;
-  return <div className="board-viewport" data-autofit={settings.autoFit}><div className="board" role="group" aria-label={`${getLayout(game.layoutId).name} Mahjong board`}
+  const beginPinch = () => {
+    const viewport = viewportRef.current; const points = [...pointers.current.values()];
+    if (!viewport || points.length !== 2) return;
+    const midpoint = { x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 };
+    pinch.current = { distance: Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y), zoom,
+      contentX: (viewport.scrollLeft + midpoint.x) / zoom, contentY: (viewport.scrollTop + midpoint.y) / zoom };
+  };
+  const pointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'touch') return;
+    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    try { event.currentTarget.setPointerCapture?.(event.pointerId); } catch { /* synthetic or already-cancelled pointer */ }
+    if (pointers.current.size === 2) beginPinch();
+  };
+  const pointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!pointers.current.has(event.pointerId)) return;
+    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const points = [...pointers.current.values()]; const active = pinch.current; const viewport = viewportRef.current;
+    if (!active || points.length !== 2 || !viewport || active.distance === 0) return;
+    event.preventDefault(); suppressClick.current = true;
+    const midpoint = { x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 };
+    const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+    const next = Math.min(1.5, Math.max(.55, active.zoom * distance / active.distance));
+    onZoom(next);
+    requestAnimationFrame(() => {
+      viewport.scrollLeft = active.contentX * next - midpoint.x;
+      viewport.scrollTop = active.contentY * next - midpoint.y;
+    });
+  };
+  const pointerEnd = (event: React.PointerEvent<HTMLDivElement>) => {
+    pointers.current.delete(event.pointerId); pinch.current = null;
+    if (pointers.current.size === 2) beginPinch();
+    setTimeout(() => { suppressClick.current = false; }, 0);
+  };
+  return <div ref={viewportRef} className="board-viewport" data-autofit={settings.autoFit}
+    onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerEnd} onPointerCancel={pointerEnd}
+    onClickCapture={(event) => { if (suppressClick.current) { event.preventDefault(); event.stopPropagation(); } }}>
+    <div className="board" role="group" aria-label={`${getLayout(game.layoutId).name} Mahjong board`}
     style={{ width: maxX * unitX + 80 * zoom, height: maxY * unitY + 90 * zoom }}>
     {layout.slots.filter((slot) => occupied.has(slot.id)).sort((a, b) => a.z - b.z).map((slot) => {
       const tile = tileAt(game.assignment, slot.id); const isFree = free.has(slot.id); const selected = game.selectedId === slot.id; const hinted = hintPair.includes(slot.id);
@@ -121,7 +162,7 @@ function GameScreen({ game, setGame, settings, onNew, onBack, openDialog, onComp
     <section className="game-hud"><div><span>{difficultyCopy[game.difficulty].title}</span><b>{getLayout(game.layoutId).name}</b></div>
       <div><span>Remaining</span><b>{game.remaining.length / 2} pairs</b></div>{settings.showTimer && <div><span>Active time</span><b>{formatTime(game.elapsedMs)}</b></div>}</section>
     {deadEnd && <div className="no-moves" role="status"><b>No free matches</b><span>Your board is safe. Undo or reshuffle the remaining tiles.</span><button onClick={() => setGame(undo(game))} disabled={!game.history.length}>Undo</button><button onClick={doShuffle}>Shuffle</button></div>}
-    <Board game={game} settings={settings} zoom={zoom} hintPair={hintPair} onTile={act} tileRefs={tileRefs} />
+    <Board game={game} settings={settings} zoom={zoom} hintPair={hintPair} onTile={act} onZoom={setZoom} tileRefs={tileRefs} />
     <nav className="game-controls" aria-label="Mahjong controls">
       <button onClick={() => setGame(undo(game))} disabled={!game.history.length} aria-label="Undo"><span>↶</span><small>Undo</small></button>
       <button onClick={doHint} disabled={!pairs.length} aria-label="Hint"><span>◇</span><small>Hint</small></button>

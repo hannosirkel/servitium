@@ -66,4 +66,19 @@ describe('Ludus and Mahjong flow', () => {
     expect(screen.getByRole('button', { name: 'Fit board' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'New game' })).toBeInTheDocument();
   });
+
+  it('pinch-zooms around a two-touch gesture without activating a tile', () => {
+    history.replaceState({}, '', '/ludus/mahjong'); render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Start Easy' }));
+    const viewport = document.querySelector('.board-viewport')!;
+    const tile = document.querySelector('.mahjong-tile') as HTMLButtonElement;
+    const initialWidth = Number.parseFloat(tile.style.width);
+    fireEvent.pointerDown(viewport, { pointerId: 1, pointerType: 'touch', clientX: 100, clientY: 100 });
+    fireEvent.pointerDown(viewport, { pointerId: 2, pointerType: 'touch', clientX: 200, clientY: 100 });
+    fireEvent.pointerMove(viewport, { pointerId: 2, pointerType: 'touch', clientX: 250, clientY: 100 });
+    expect(Number.parseFloat(tile.style.width)).toBeGreaterThan(initialWidth);
+    expect(screen.getByText('40 pairs')).toBeInTheDocument();
+    fireEvent.pointerUp(viewport, { pointerId: 2, pointerType: 'touch', clientX: 250, clientY: 100 });
+    fireEvent.pointerUp(viewport, { pointerId: 1, pointerType: 'touch', clientX: 100, clientY: 100 });
+  });
 });
