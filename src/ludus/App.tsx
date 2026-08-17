@@ -22,7 +22,7 @@ const formatTime = (milliseconds: number): string => {
 function Header({ route, onBack }: { route: Route; onBack?: () => void }) {
   return <header className="ludus-header">
     <a className="brand" href="/" aria-label="Servitium home"><span className="brand-mark">S</span><span><b>SERVITIUM</b><small>LUDUS</small></span></a>
-    <div className="header-actions">{route === 'mahjong' && <button className="text-button" onClick={onBack}>← Ludus</button>}<FullscreenButton compact /></div>
+    <div className="header-actions">{route === 'mahjong' && <button className="text-button" onClick={onBack}>← Ludus</button>}<FullscreenButton /></div>
   </header>;
 }
 
@@ -70,10 +70,9 @@ function StartScreen({ saved, onContinue, onStart, onDaily, onBack, openDialog }
   </main>;
 }
 
-function Board({ game, settings, zoom, hintPair, onTile, onZoom, tileRefs }: {
+function Board({ game, settings, zoom, hintPair, onTile, onZoom }: {
   game: MahjongGame; settings: Settings; zoom: number; hintPair: string[]; onTile: (id: string) => void;
   onZoom: (zoom: number) => void;
-  tileRefs: React.MutableRefObject<Record<string, HTMLButtonElement | null>>;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
@@ -124,7 +123,7 @@ function Board({ game, settings, zoom, hintPair, onTile, onZoom, tileRefs }: {
     {layout.slots.filter((slot) => occupied.has(slot.id)).sort((a, b) => a.z - b.z).map((slot) => {
       const tile = tileAt(game.assignment, slot.id); const isFree = free.has(slot.id); const selected = game.selectedId === slot.id; const hinted = hintPair.includes(slot.id);
       const label = `${tile.label}, ${isFree ? 'free' : 'blocked'}`;
-      return <button key={slot.id} ref={(element) => { tileRefs.current[slot.id] = element; }} type="button"
+      return <button key={slot.id} type="button"
         data-slot-id={slot.id}
         className={`mahjong-tile family-${tile.family}${isFree && settings.highlightFree ? ' free' : ''}${selected ? ' selected' : ''}${hinted ? ' hinted' : ''}`}
         style={{ left: slot.x * unitX + slot.z * layer, top: slot.y * unitY - slot.z * layer, width: 60 * zoom, height: 74 * zoom, zIndex: slot.z * 100 + Math.round(slot.y) }}
@@ -143,7 +142,6 @@ function GameScreen({ game, setGame, settings, onNew, onBack, openDialog, onComp
   openDialog: (dialog: Exclude<DialogName, null>) => void; onComplete: (game: MahjongGame) => void;
 }) {
   const [zoom, setZoom] = useState(settings.autoFit ? .72 : 1); const [hintPair, setHintPair] = useState<string[]>([]); const [announcement, setAnnouncement] = useState('');
-  const tileRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const pairs = availablePairs(game); const deadEnd = game.remaining.length > 0 && pairs.length === 0;
   const act = (id: string) => {
     const result = selectTile(game, id); setGame(result.game);
@@ -151,7 +149,6 @@ function GameScreen({ game, setGame, settings, onNew, onBack, openDialog, onComp
     setAnnouncement(messages[result.event]);
     if (result.event === 'removed' || result.event === 'won') {
       if (settings.sound) playTone(520, .035); setHintPair([]);
-      requestAnimationFrame(() => Object.values(tileRefs.current).find((element) => element && !element.disabled && element.tabIndex === 0)?.focus());
     }
     if (result.event === 'won') onComplete(result.game);
   };
@@ -162,7 +159,7 @@ function GameScreen({ game, setGame, settings, onNew, onBack, openDialog, onComp
     <section className="game-hud"><div><span>{difficultyCopy[game.difficulty].title}</span><b>{getLayout(game.layoutId).name}</b></div>
       <div><span>Remaining</span><b>{game.remaining.length / 2} pairs</b></div>{settings.showTimer && <div><span>Active time</span><b>{formatTime(game.elapsedMs)}</b></div>}</section>
     {deadEnd && <div className="no-moves" role="status"><b>No free matches</b><span>Your board is safe. Undo or reshuffle the remaining tiles.</span><button onClick={() => setGame(undo(game))} disabled={!game.history.length}>Undo</button><button onClick={doShuffle}>Shuffle</button></div>}
-    <Board game={game} settings={settings} zoom={zoom} hintPair={hintPair} onTile={act} onZoom={setZoom} tileRefs={tileRefs} />
+    <Board game={game} settings={settings} zoom={zoom} hintPair={hintPair} onTile={act} onZoom={setZoom} />
     <nav className="game-controls" aria-label="Mahjong controls">
       <button onClick={() => setGame(undo(game))} disabled={!game.history.length} aria-label="Undo"><span>↶</span><small>Undo</small></button>
       <button onClick={doHint} disabled={!pairs.length} aria-label="Hint"><span>◇</span><small>Hint</small></button>

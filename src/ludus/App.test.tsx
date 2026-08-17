@@ -29,16 +29,18 @@ describe('Ludus and Mahjong flow', () => {
     expect(screen.getAllByRole('button', { name: /, (free|blocked)$/ })).toHaveLength(count as number);
   });
 
-  it('continues a saved board, removes a pair, hints, undoes, and survives reload', () => {
+  it('continues a saved board, removes a pair without refocusing, hints, undoes, and survives reload', () => {
     const saved = createGame('easy', 'lotus-garden', 'component'); saveGame(localStorage, saved);
     history.replaceState({}, '', '/ludus/mahjong'); render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continue Easy/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Hint' }));
     expect(document.querySelectorAll('.hinted')).toHaveLength(2);
     const pair = saved.certificate[0];
+    const focus = vi.spyOn(HTMLElement.prototype, 'focus');
     fireEvent.click(document.querySelector(`[data-slot-id="${pair[0]}"]`)!);
     fireEvent.click(document.querySelector(`[data-slot-id="${pair[1]}"]`)!);
     expect(screen.getByText('39 pairs')).toBeInTheDocument();
+    expect(focus).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
     expect(screen.getByText('40 pairs')).toBeInTheDocument();
     expect(localStorage.getItem(GAME_KEY)).toContain('lotus-garden');
@@ -56,7 +58,7 @@ describe('Ludus and Mahjong flow', () => {
     expect(screen.getByRole('button', { name: 'Replay this board' })).toBeInTheDocument();
   });
 
-  it('confirms restart and leaving a progressed game, and exposes mobile-safe controls', () => {
+  it('confirms restart and leaving a progressed game, and exposes board controls', () => {
     let game = createGame('easy', 'lotus-garden', 'confirm'); const pair = game.certificate[0];
     game = selectTile(selectTile(game, pair[0]).game, pair[1]).game; saveGame(localStorage, game);
     history.replaceState({}, '', '/ludus/mahjong'); render(<App />); fireEvent.click(screen.getByRole('button', { name: /Continue Easy/ }));
