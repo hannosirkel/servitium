@@ -11,7 +11,7 @@ button:disabled { opacity: .4; cursor: default; }
 .brand { display: flex; align-items: center; gap: 11px; color: inherit; text-decoration: none; }
 .brand-mark { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid var(--gold); color: #f3d28b; font: 24px Georgia, serif; }
 .brand b, .brand small { display: block; }.brand b { font: 600 12px Georgia, serif; letter-spacing: .17em; }.brand small { margin-top: 4px; color: #aaa89f; font-size: 9px; letter-spacing: .24em; }
-.header-actions { display: flex; align-items: center; gap: 10px; }.text-button { padding: 9px 13px; background: transparent; }
+.header-actions { display: flex; align-items: center; gap: 10px; }.text-button { min-height: 44px; padding: 8px 13px; background: transparent; }
 .eyebrow, .status { color: var(--gold); font: 700 10px Georgia, serif; letter-spacing: .24em; }
 h1, h2 { font-family: Georgia, serif; font-weight: 500; }
 .shelf-intro { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: clamp(44px, 8vh, 92px) 0 30px; }

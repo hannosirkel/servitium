@@ -48,9 +48,14 @@ describe('solvable generator', () => {
 
   it('disperses matching tiles across the larger boards', () => {
     for (const layout of LAYOUTS.filter((item) => item.slots.length === 144)) {
-      let nearby = 0; let pairs = 0;
+      let nearby = 0; let pairs = 0; let sameLayer = 0; let certificatePairs = 0;
       for (let seed = 0; seed < 24; seed += 1) {
         const deal = generateDeal(layout.difficulty, layout.id, `dispersion-${seed}`);
+        const slots = new Map(layout.slots.map((slot) => [slot.id, slot]));
+        for (const [first, second] of deal.certificate) {
+          certificatePairs += 1;
+          if (slots.get(first)!.z === slots.get(second)!.z) sameLayer += 1;
+        }
         for (let first = 0; first < layout.slots.length; first += 1) {
           for (let second = first + 1; second < layout.slots.length; second += 1) {
             if (!matches(tileAt(deal.assignment, layout.slots[first].id), tileAt(deal.assignment, layout.slots[second].id))) continue;
@@ -61,6 +66,7 @@ describe('solvable generator', () => {
         }
       }
       expect(nearby / pairs).toBeLessThan(.08);
+      expect(sameLayer / certificatePairs).toBeLessThan(.5);
     }
   });
 

@@ -42,8 +42,7 @@ export function removalCertificate(layout: Layout, occupiedIds: string[], seed: 
     const highest = Math.max(...free.map((slot) => slot.z));
     const candidates = shuffled(free.flatMap((first, index) => free.slice(index + 1).map((second) => ({
       pair: [first.id, second.id] as CertificatePair,
-      priority: (Number(first.z === highest && second.z === highest) * 2 + Number(first.z === second.z)) * 100
-        + distance(first, second),
+      priority: Number(first.z === highest || second.z === highest) * 100 + distance(first, second),
     }))), random).sort((a, b) => b.priority - a.priority);
     for (const candidate of candidates) {
       const next = new Set(occupied); next.delete(candidate.pair[0]); next.delete(candidate.pair[1]);
