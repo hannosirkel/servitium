@@ -20,9 +20,23 @@ describe('Ludus and Mahjong flow', () => {
     expect(screen.getByText('Full screen')).toHaveAttribute('aria-hidden', 'true');
     expect(screen.getByRole('heading', { name: 'Mahjong Solitaire' })).toBeInTheDocument();
     expect(screen.queryByLabelText(/previous/i)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /play now/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /play now/i })[0]);
     expect(location.pathname).toBe('/ludus/mahjong');
     expect(screen.getByRole('heading', { name: 'Clear the quiet table' })).toBeInTheDocument();
+  });
+
+  it('routes the FreeCell catalogue entry into a complete deal', () => {
+    render(<App />);
+    fireEvent.click(screen.getAllByRole('button', { name: /play now/i })[1]);
+    expect(location.pathname).toBe('/ludus/freecell');
+    expect(screen.getByText('FreeCell')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /cascade \d, destination/i })).toHaveLength(8);
+    expect(screen.getAllByRole('button', { name: /free cell/i })).toHaveLength(4);
+    expect(screen.getByRole('button', { name: /restart/i })).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: /, cascade 1/i }).at(-1)!);
+    fireEvent.click(screen.getByRole('button', { name: 'Empty free cell 1' }));
+    expect(screen.queryByRole('button', { name: 'Empty free cell 1' })).not.toBeInTheDocument();
+    expect(localStorage.getItem('servitium.ludus.freecell.v1')).toContain('cascades');
   });
 
   it.each([['Easy', 80], ['Medium', 144], ['Hard', 144]])('starts %s with the expected tile count', (difficulty, count) => {
