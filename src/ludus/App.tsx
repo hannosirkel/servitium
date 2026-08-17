@@ -22,14 +22,14 @@ const formatTime = (milliseconds: number): string => {
 function Header({ route, onBack }: { route: Route; onBack?: () => void }) {
   return <header className="ludus-header">
     <a className="brand" href="/" aria-label="Servitium home"><span className="brand-mark">S</span><span><b>SERVITIUM</b><small>LUDUS</small></span></a>
-    <div className="header-actions">{route === 'mahjong' && <button className="text-button" onClick={onBack}>← Ludus</button>}<FullscreenButton /></div>
+    <div className="header-actions">{route === 'mahjong' && <button className="text-button" onClick={onBack}>← Ludus</button>}<FullscreenButton iconOnly /></div>
   </header>;
 }
 
 function Shelf({ openGame }: { openGame: () => void }) {
   return <main className="ludus-shell shelf-page">
     <Header route="shelf" />
-    <section className="shelf-intro"><span className="eyebrow">GAMES FOR A QUIET TABLE</span><h1>Ludus</h1><p>Small games, ready when you are.</p></section>
+    <section className="shelf-intro"><span className="eyebrow">GAMES FOR A QUIET TABLE</span><h1>Ludus</h1><p>Time is your enemy, kill it here.</p></section>
     <section className="game-shelf" aria-label="Games">
       {GAME_CATALOGUE.map((game) => <article className="game-card" key={game.id}>
         <div className="game-art" aria-hidden="true"><span>{game.mark}</span><i /><i /><i /></div>
@@ -37,7 +37,6 @@ function Shelf({ openGame }: { openGame: () => void }) {
           <button className="primary" onClick={openGame}>Play now <span aria-hidden="true">→</span></button></div>
       </article>)}
     </section>
-    <p className="shelf-note">More games can join the shelf later.</p>
   </main>;
 }
 

@@ -14,7 +14,7 @@ function fullscreenElement(): Element | null {
   return document.fullscreenElement ?? current.webkitFullscreenElement ?? null;
 }
 
-export default function FullscreenButton({ compact = false }: { compact?: boolean }) {
+export default function FullscreenButton({ compact = false, iconOnly = false }: { compact?: boolean; iconOnly?: boolean }) {
   const [active, setActive] = useState(() => fullscreenElement() !== null);
   const root = document.documentElement as FullscreenElement;
   const current = document as FullscreenDocument;
@@ -50,14 +50,14 @@ export default function FullscreenButton({ compact = false }: { compact?: boolea
   return (
     <button
       type="button"
-      className={`fullscreen-button${compact ? ' compact' : ''}`}
+      className={`fullscreen-button${compact ? ' compact' : ''}${iconOnly ? ' icon-only' : ''}`}
       aria-pressed={active}
       aria-label={active ? 'Exit full screen' : 'Enter full screen'}
       disabled={!supported}
       onClick={() => void toggle()}
     >
       <span aria-hidden="true">⛶</span>
-      <small>{active ? 'Exit full screen' : 'Full screen'}</small>
+      {!iconOnly && <small>{active ? 'Exit full screen' : 'Full screen'}</small>}
     </button>
   );
 }
