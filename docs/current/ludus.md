@@ -24,6 +24,8 @@ controls use the shared bottom action bar, cards and the shelf
 have game-specific artwork, and completion triggers a reduced-motion-safe
 celebration. Games persist locally with elapsed time, move history, unlimited
 Undo, exact progress recovery, Restart, and New Deal.
+Overlapped tableau cards reveal fully on desktop hover and after a deliberate
+mobile long-press without also activating a move.
 
 The pure TypeScript engine models tile faces separately from layered slots.
 Free-tile checks use rectangle overlap across layers and same-layer side

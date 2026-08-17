@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import { GAME_KEY, saveGame } from './mahjong/persistence';
@@ -34,6 +34,10 @@ describe('Ludus and Mahjong flow', () => {
     expect(screen.getAllByRole('button', { name: /cascade \d, destination/i })).toHaveLength(8);
     expect(screen.getAllByRole('button', { name: /free cell/i })).toHaveLength(4);
     expect(screen.getByRole('button', { name: /restart/i })).toBeInTheDocument();
+    vi.useFakeTimers(); const covered = screen.getAllByRole('button', { name: /, cascade 1/i })[0];
+    fireEvent.pointerDown(covered, { pointerType: 'touch' }); act(() => vi.advanceTimersByTime(500));
+    expect(covered).toHaveClass('peek'); fireEvent.pointerUp(covered, { pointerType: 'touch' }); fireEvent.click(covered);
+    expect(covered).toHaveClass('peek'); vi.useRealTimers();
     const source = screen.getAllByRole('button', { name: /, cascade 1/i }).at(-1)!;
     fireEvent.click(source); expect(source).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(source); expect(source).toHaveAttribute('aria-pressed', 'false');
