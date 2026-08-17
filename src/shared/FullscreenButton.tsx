@@ -57,7 +57,7 @@ export default function FullscreenButton({ compact = false, iconOnly = false }: 
       onClick={() => void toggle()}
     >
       <span aria-hidden="true">⛶</span>
-      {!iconOnly && <small>{active ? 'Exit full screen' : 'Full screen'}</small>}
+      <small aria-hidden={iconOnly}>{active ? 'Exit full screen' : 'Full screen'}</small>
     </button>
   );
 }

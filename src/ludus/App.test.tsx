@@ -17,7 +17,7 @@ describe('Ludus and Mahjong flow', () => {
     expect(screen.getByRole('heading', { name: 'Ludus' })).toBeInTheDocument();
     expect(screen.getByText('Time is your enemy, kill it here.')).toBeInTheDocument();
     expect(screen.queryByText('More games can join the shelf later.')).not.toBeInTheDocument();
-    expect(screen.queryByText('Full screen')).not.toBeInTheDocument();
+    expect(screen.getByText('Full screen')).toHaveAttribute('aria-hidden', 'true');
     expect(screen.getByRole('heading', { name: 'Mahjong Solitaire' })).toBeInTheDocument();
     expect(screen.queryByLabelText(/previous/i)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /play now/i }));
