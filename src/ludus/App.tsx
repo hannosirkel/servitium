@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import FullscreenButton from '../shared/FullscreenButton';
+import FreeCell from './freecell/FreeCell';
 import { GAME_CATALOGUE } from './catalogue';
 import { freeSlots, tileAt } from './mahjong/engine';
 import { getLayout, layoutsFor, type Difficulty } from './mahjong/layouts';
@@ -12,9 +13,9 @@ import {
   availablePairs, createGame, hint, restart, selectTile, shuffleGame, undo, type MahjongGame,
 } from './mahjong/state';
 
-type Route = 'shelf' | 'mahjong';
+type Route = 'shelf' | 'mahjong' | 'freecell';
 type DialogName = 'help' | 'settings' | 'statistics' | null;
-const routeFromPath = (): Route => location.pathname.replace(/\/$/, '') === '/ludus/mahjong' ? 'mahjong' : 'shelf';
+const routeFromPath = (): Route => location.pathname.replace(/\/$/, '') === '/ludus/mahjong' ? 'mahjong' : location.pathname.replace(/\/$/, '') === '/ludus/freecell' ? 'freecell' : 'shelf';
 const formatTime = (milliseconds: number): string => {
   const seconds = Math.floor(milliseconds / 1000); return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 };
@@ -26,15 +27,15 @@ function Header({ route, onBack }: { route: Route; onBack?: () => void }) {
   </header>;
 }
 
-function Shelf({ openGame }: { openGame: () => void }) {
+function Shelf({ openGame }: { openGame: (route: string) => void }) {
   return <main className="ludus-shell shelf-page">
     <Header route="shelf" />
     <section className="shelf-intro"><span className="eyebrow">GAMES FOR A QUIET TABLE</span><h1>Ludus</h1><p>Time is your enemy, kill it here.</p></section>
     <section className="game-shelf" aria-label="Games">
       {GAME_CATALOGUE.map((game) => <article className="game-card" key={game.id}>
-        <div className="game-art" aria-hidden="true"><span>{game.mark}</span><i /><i /><i /></div>
+        <div className={`game-art ${game.id === 'freecell' ? 'freecell-art' : ''}`} aria-hidden="true"><span>{game.mark}</span><i /><i /><i /></div>
         <div><span className="status">AVAILABLE</span><h2>{game.title}</h2><p>{game.description}</p>
-          <button className="primary" onClick={openGame}>Play now <span aria-hidden="true">→</span></button></div>
+          <button className="primary" onClick={() => openGame(game.route)}>Play now <span aria-hidden="true">→</span></button></div>
       </article>)}
     </section>
   </main>;
@@ -203,7 +204,7 @@ export default function App() {
   const [route, setRoute] = useState<Route>(routeFromPath); const [saved, setSaved] = useState<MahjongGame | null>(() => restoreGame(localStorage));
   const [game, setGameState] = useState<MahjongGame | null>(null); const [completed, setCompleted] = useState<MahjongGame | null>(null);
   const [settings, setSettingsState] = useState(() => loadSettings(localStorage)); const [stats, setStats] = useState(() => loadStats(localStorage)); const [dialog, setDialog] = useState<DialogName>(null);
-  const navigate = (next: Route) => { const path = next === 'shelf' ? '/ludus/' : '/ludus/mahjong'; history.pushState({}, '', path); setRoute(next); setGameState(null); setCompleted(null); };
+  const navigate = (next: Route) => { const path = next === 'shelf' ? '/ludus/' : `/ludus/${next}`; history.pushState({}, '', path); setRoute(next); setGameState(null); setCompleted(null); };
   useEffect(() => { const pop = () => { setRoute(routeFromPath()); setGameState(null); setCompleted(null); }; addEventListener('popstate', pop); return () => removeEventListener('popstate', pop); }, []);
   useEffect(() => { saveSettings(localStorage, settings); }, [settings]);
   useEffect(() => { if (game) { saveGame(localStorage, game); setSaved(game); } }, [game]);
@@ -225,7 +226,8 @@ export default function App() {
   const finish = (won: MahjongGame) => { const finalStats = recordCompletion(stats, won); setStats(finalStats); saveStats(localStorage, finalStats); clearGame(localStorage); setSaved(null); setCompleted(won); setGameState(null); };
   const replay = () => completed && start(completed.difficulty, completed.layoutId, completed.kind, completed.seed);
   const content = useMemo(() => {
-    if (route === 'shelf') return <Shelf openGame={() => navigate('mahjong')} />;
+    if (route === 'shelf') return <Shelf openGame={(path) => navigate(path.endsWith('freecell') ? 'freecell' : 'mahjong')} />;
+    if (route === 'freecell') return <FreeCell onBack={() => navigate('shelf')} />;
     if (completed) return <Completion game={completed} stats={stats} onNew={() => setCompleted(null)} onReplay={replay} onBack={() => navigate('shelf')} />;
     if (game) return <GameScreen game={game} setGame={setGameState} settings={settings} onNew={abandon} onBack={back} openDialog={setDialog} onComplete={finish} />;
     return <StartScreen saved={saved} onContinue={() => setGameState(saved)} onStart={start} onDaily={daily} onBack={() => navigate('shelf')} openDialog={setDialog} />;
