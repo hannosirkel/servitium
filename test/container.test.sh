@@ -3,7 +3,7 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 dockerfile="$repo_root/Dockerfile"
-expected_from='FROM node:26.5.1-bookworm-slim@sha256:9e6f9357d371591e32ab6f2d8a26d63bdd0d17c29eee3f4f3e7e454d9634bf73'
+expected_from='FROM node:26.7.0-bookworm-slim@sha256:cd565714d4da3e84bfd341e31448f81d47c6362198f152345297c9c1154e6341'
 
 [[ "$(head -n 1 "$dockerfile")" == "$expected_from" ]]
 grep -qx 'USER 10001:10001' "$dockerfile"
