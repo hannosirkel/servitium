@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import { GAME_KEY, saveGame } from './mahjong/persistence';
 import { createGame, selectTile } from './mahjong/state';
+import { newGame as newFreeCellGame } from './freecell/engine';
 
 beforeEach(() => {
   localStorage.clear(); history.replaceState({}, '', '/ludus/');
@@ -38,7 +39,19 @@ describe('Ludus and Mahjong flow', () => {
     fireEvent.click(source); expect(source).toHaveAttribute('aria-pressed', 'false');
     fireEvent.doubleClick(source);
     expect(screen.queryByRole('button', { name: 'Empty free cell 1' })).not.toBeInTheDocument();
+    const occupiedCell = screen.getByRole('button', { name: /Free cell 1,/ });
+    fireEvent.click(occupiedCell); expect(occupiedCell).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(occupiedCell); expect(occupiedCell).toHaveAttribute('aria-pressed', 'false');
     expect(localStorage.getItem('servitium.ludus.freecell.v1')).toContain('cascades');
+  });
+
+  it('double-clicks a free-cell card to its legal foundation', () => {
+    const game = newFreeCellGame('foundation');
+    const ace = game.cascades.flat().find((card) => card.id === 'hearts-1')!;
+    game.cascades = game.cascades.map((column) => column.filter((card) => card.id !== ace.id)); game.cells[0] = ace;
+    localStorage.setItem('servitium.ludus.freecell.v1', JSON.stringify(game)); history.replaceState({}, '', '/ludus/freecell'); render(<App />);
+    fireEvent.doubleClick(screen.getByRole('button', { name: 'Free cell 1, A of hearts' }));
+    expect(screen.getByRole('button', { name: 'hearts foundation, A' })).toBeInTheDocument();
   });
 
   it.each([['Easy', 80], ['Medium', 144], ['Hard', 144]])('starts %s with the expected tile count', (difficulty, count) => {

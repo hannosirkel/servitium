@@ -2,7 +2,7 @@ import { seededRandom, shuffled } from '../mahjong/random';
 
 export type Suit = 'clubs' | 'diamonds' | 'hearts' | 'spades';
 export type Card = { id: string; suit: Suit; rank: number; color: 'red' | 'black' };
-export type Source = { kind: 'cascade'; index: number; cardIndex: number } | { kind: 'cell'; index: number };
+export type Source = { kind: 'cascade'; index: number; cardIndex: number } | { kind: 'cell'; index: number } | { kind: 'foundation'; suit: Suit };
 export type Destination = { kind: 'cascade' | 'cell'; index: number } | { kind: 'foundation'; suit: Suit };
 export type Snapshot = Pick<FreeCellGame, 'cascades' | 'cells' | 'foundations' | 'moves'>;
 export type FreeCellGame = {
@@ -28,6 +28,7 @@ export function capacity(game: FreeCellGame, destination: number): number {
 const snapshot = (game: FreeCellGame): Snapshot => ({ cascades: game.cascades.map((column) => [...column]), cells: [...game.cells], foundations: Object.fromEntries(SUITS.map((suit) => [suit, [...game.foundations[suit]]])) as Record<Suit, Card[]>, moves: game.moves });
 function take(game: FreeCellGame, source: Source): Card[] | null {
   if (source.kind === 'cell') return game.cells[source.index] ? [game.cells[source.index]!] : null;
+  if (source.kind === 'foundation') return game.foundations[source.suit].length ? [game.foundations[source.suit].at(-1)!] : null;
   const column = game.cascades[source.index];
   if (!column[source.cardIndex] || !movableRun(column, source.cardIndex)) return null;
   return column.slice(source.cardIndex);
@@ -45,9 +46,13 @@ export function move(game: FreeCellGame, source: Source, destination: Destinatio
     const target = game.cascades[destination.index].at(-1);
     if (target && !canStack(cards[0], target)) return null;
   }
-  if (source.kind === destination.kind && 'index' in destination && source.index === destination.index) return null;
+  if ((source.kind === 'cell' || source.kind === 'cascade') && source.kind === destination.kind
+    && 'index' in destination && source.index === destination.index) return null;
+  if (source.kind === 'foundation' && destination.kind === 'foundation' && source.suit === destination.suit) return null;
   const next: FreeCellGame = { ...game, cascades: game.cascades.map((column) => [...column]), cells: [...game.cells], foundations: Object.fromEntries(SUITS.map((suit) => [suit, [...game.foundations[suit]]])) as Record<Suit, Card[]>, moves: game.moves + 1, history: [...game.history, snapshot(game)] };
-  if (source.kind === 'cell') next.cells[source.index] = null; else next.cascades[source.index].splice(source.cardIndex);
+  if (source.kind === 'cell') next.cells[source.index] = null;
+  else if (source.kind === 'foundation') next.foundations[source.suit].pop();
+  else next.cascades[source.index].splice(source.cardIndex);
   if (destination.kind === 'cell') next.cells[destination.index] = cards[0];
   else if (destination.kind === 'foundation') next.foundations[destination.suit].push(cards[0]);
   else next.cascades[destination.index].push(...cards);
