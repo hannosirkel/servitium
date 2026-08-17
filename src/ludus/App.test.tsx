@@ -1,8 +1,9 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import { GAME_KEY, saveGame } from './mahjong/persistence';
 import { createGame, selectTile } from './mahjong/state';
+import { newGame as newFreeCellGame } from './freecell/engine';
 
 beforeEach(() => {
   localStorage.clear(); history.replaceState({}, '', '/ludus/');
@@ -20,9 +21,46 @@ describe('Ludus and Mahjong flow', () => {
     expect(screen.getByText('Full screen')).toHaveAttribute('aria-hidden', 'true');
     expect(screen.getByRole('heading', { name: 'Mahjong Solitaire' })).toBeInTheDocument();
     expect(screen.queryByLabelText(/previous/i)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /play now/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /play now/i })[0]);
     expect(location.pathname).toBe('/ludus/mahjong');
     expect(screen.getByRole('heading', { name: 'Clear the quiet table' })).toBeInTheDocument();
+  });
+
+  it('routes the FreeCell catalogue entry into a complete deal', () => {
+    render(<App />);
+    fireEvent.click(screen.getAllByRole('button', { name: /play now/i })[1]);
+    expect(location.pathname).toBe('/ludus/freecell');
+    expect(screen.getByText('FreeCell')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /cascade \d, destination/i })).toHaveLength(8);
+    expect(screen.getAllByRole('button', { name: /free cell/i })).toHaveLength(4);
+    expect(screen.getByRole('button', { name: /restart/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    const autoFinish = screen.getByRole('checkbox', { name: 'Automatically finish clear games' });
+    expect(autoFinish).not.toBeChecked(); fireEvent.click(autoFinish); expect(autoFinish).toBeChecked();
+    expect(localStorage.getItem('servitium.ludus.freecell.settings.v1')).toContain('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Close dialog' }));
+    vi.useFakeTimers(); const covered = screen.getAllByRole('button', { name: /, cascade 1/i })[0];
+    fireEvent.pointerDown(covered, { pointerType: 'touch' }); act(() => vi.advanceTimersByTime(500));
+    expect(covered).toHaveClass('peek'); fireEvent.pointerUp(covered, { pointerType: 'touch' }); fireEvent.click(covered);
+    expect(covered).toHaveClass('peek'); vi.useRealTimers();
+    const source = screen.getAllByRole('button', { name: /, cascade 1/i }).at(-1)!;
+    fireEvent.click(source); expect(source).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(source); expect(source).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.doubleClick(source);
+    expect(screen.queryByRole('button', { name: 'Empty free cell 1' })).not.toBeInTheDocument();
+    const occupiedCell = screen.getByRole('button', { name: /Free cell 1,/ });
+    fireEvent.click(occupiedCell); expect(occupiedCell).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(occupiedCell); expect(occupiedCell).toHaveAttribute('aria-pressed', 'false');
+    expect(localStorage.getItem('servitium.ludus.freecell.v1')).toContain('cascades');
+  });
+
+  it('double-clicks a free-cell card to its legal foundation', () => {
+    const game = newFreeCellGame('foundation');
+    const ace = game.cascades.flat().find((card) => card.id === 'hearts-1')!;
+    game.cascades = game.cascades.map((column) => column.filter((card) => card.id !== ace.id)); game.cells[0] = ace;
+    localStorage.setItem('servitium.ludus.freecell.v1', JSON.stringify(game)); history.replaceState({}, '', '/ludus/freecell'); render(<App />);
+    fireEvent.doubleClick(screen.getByRole('button', { name: 'Free cell 1, A of hearts' }));
+    expect(screen.getByRole('button', { name: 'hearts foundation, A' })).toBeInTheDocument();
   });
 
   it.each([['Easy', 80], ['Medium', 144], ['Hard', 144]])('starts %s with the expected tile count', (difficulty, count) => {

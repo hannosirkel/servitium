@@ -180,7 +180,7 @@ function createServer() {
 
     if (request.method === 'GET' && request.url.startsWith('/ludus/')) {
       const requested = decodeURIComponent(request.url.slice('/ludus/'.length).split('?')[0]);
-      const relativePath = requested === '' || requested === 'mahjong' ? 'ludus.html' : requested;
+      const relativePath = requested === '' || requested === 'mahjong' || requested === 'freecell' ? 'ludus.html' : requested;
       const filePath = path.resolve(ludusRoot, relativePath);
       if (filePath.startsWith(`${ludusRoot}${path.sep}`) && fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
         const body = fs.readFileSync(filePath);

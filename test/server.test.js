@@ -121,10 +121,10 @@ test('GET /ludus redirects to the canonical trailing-slash path', async () => {
   assert.equal(response.headers.get('location'), '/ludus/');
 });
 
-test('GET /ludus/ and its Mahjong route serve the built frontend', {
+test('GET /ludus/ and its game routes serve the built frontend', {
   skip: !fs.existsSync(path.join(__dirname, '..', 'dist', 'ludus', 'ludus.html')),
 }, async () => {
-  for (const route of ['/ludus/', '/ludus/mahjong']) {
+  for (const route of ['/ludus/', '/ludus/mahjong', '/ludus/freecell']) {
     const response = await fetch(`${baseUrl}${route}`);
     assert.equal(response.status, 200);
     const body = await response.text();

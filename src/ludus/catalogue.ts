@@ -14,4 +14,7 @@ export const GAME_CATALOGUE: GameCatalogueEntry[] = [{
   route: '/ludus/mahjong',
   mark: '🀄',
   status: 'available',
+}, {
+  id: 'freecell', title: 'FreeCell', description: 'Turn a fully open deck into four ordered foundations.',
+  route: '/ludus/freecell', mark: '♠', status: 'available',
 }];
