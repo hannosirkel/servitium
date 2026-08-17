@@ -3,11 +3,12 @@ FROM node:26.5.1-bookworm-slim@sha256:9e6f9357d371591e32ab6f2d8a26d63bdd0d17c29e
 WORKDIR /build
 COPY package.json package-lock.json ./
 RUN npm ci
-COPY index.html chess-clock.html mtg.html tsconfig.json vite.config.ts vite.chess.config.ts vite.mtg.config.ts ./
+COPY index.html chess-clock.html mtg.html ludus.html tsconfig.json vite.config.ts vite.chess.config.ts vite.mtg.config.ts vite.ludus.config.ts ./
 COPY public ./public
 COPY src/dice ./src/dice
 COPY src/chess-clock ./src/chess-clock
 COPY src/mtg ./src/mtg
+COPY src/ludus ./src/ludus
 COPY src/shared ./src/shared
 RUN npm run build
 

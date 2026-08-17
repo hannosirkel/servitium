@@ -1,13 +1,14 @@
 # Service
 
 Servitium is a Node.js HTTP service listening on port `8099` by default. The
-home page links to three independent browser applications:
+home page links to four independent browser applications:
 
 - `/dice/`
 - `/chess/`
 - `/mtg/`
+- `/ludus/`
 
-`/dice`, `/chess`, and `/mtg` redirect to their trailing-slash canonical
+`/dice`, `/chess`, `/mtg`, and `/ludus` redirect to their trailing-slash canonical
 paths. The retired `/chess-clock` path redirects to `/chess/`. `/healthz`
 returns `{"status":"ok"}`.
 

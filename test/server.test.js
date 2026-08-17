@@ -39,6 +39,7 @@ test('GET / returns the Servitium image page', async () => {
   assert.match(body, /href="\/dice\/"/);
   assert.match(body, /href="\/chess\/"/);
   assert.match(body, /href="\/mtg\/"/);
+  assert.match(body, /href="\/ludus\/"/);
 });
 
 test('GET /assets/fantasy-overlord.png returns the hero image', async () => {
@@ -112,6 +113,24 @@ test('GET /mtg/ serves the built frontend with subpath assets', {
   const body = await response.text();
   assert.match(body, /MTG Life Counter/);
   assert.match(body, /\/mtg\/assets\//);
+});
+
+test('GET /ludus redirects to the canonical trailing-slash path', async () => {
+  const response = await fetch(`${baseUrl}/ludus`, { redirect: 'manual' });
+  assert.equal(response.status, 308);
+  assert.equal(response.headers.get('location'), '/ludus/');
+});
+
+test('GET /ludus/ and its Mahjong route serve the built frontend', {
+  skip: !fs.existsSync(path.join(__dirname, '..', 'dist', 'ludus', 'ludus.html')),
+}, async () => {
+  for (const route of ['/ludus/', '/ludus/mahjong']) {
+    const response = await fetch(`${baseUrl}${route}`);
+    assert.equal(response.status, 200);
+    const body = await response.text();
+    assert.match(body, /Ludus/);
+    assert.match(body, /\/ludus\/assets\//);
+  }
 });
 
 test('GET /healthz reports readiness', async () => {

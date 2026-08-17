@@ -13,6 +13,9 @@ A small Node.js service for the community sandbox. It listens on port `8099`.
   Constructed/Limited, Commander, Brawl, Two-Headed Giant, and custom games;
   life, poison, Commander damage and tax, monarch, initiative, undo/redo,
   history, rematches, dice/coin tools, wake lock, and local recovery.
+- `/ludus` — a game shelf whose first game is local-first Mahjong Solitaire,
+  with deterministic solvable deals, six layouts, three difficulty levels,
+  Daily Puzzles, assistance, and local recovery.
 - `/healthz` — readiness and liveness status.
 
 The home page at `/` links to every application. The MTG research and plans are

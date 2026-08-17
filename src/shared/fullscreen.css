@@ -13,6 +13,7 @@
 }
 .fullscreen-button span { font-size: 20px; line-height: 1; }
 .fullscreen-button small { color: inherit; font: 600 9px Inter, system-ui, sans-serif; letter-spacing: .06em; white-space: nowrap; }
+.fullscreen-button.icon-only small { visibility: hidden; }
 .fullscreen-button[aria-pressed="true"] { border-color: var(--gold, #dba64b); background: #4b3c29; }
 .fullscreen-button:disabled { opacity: .42; cursor: not-allowed; }
 .fullscreen-button.compact { width: clamp(48px, 11vw, 70px); height: 54px; display: grid; gap: 0; padding: 5px; border: 0; border-right: 1px solid #ffffff14; background: none; }
