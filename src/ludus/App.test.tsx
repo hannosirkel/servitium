@@ -34,6 +34,11 @@ describe('Ludus and Mahjong flow', () => {
     expect(screen.getAllByRole('button', { name: /cascade \d, destination/i })).toHaveLength(8);
     expect(screen.getAllByRole('button', { name: /free cell/i })).toHaveLength(4);
     expect(screen.getByRole('button', { name: /restart/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    const autoFinish = screen.getByRole('checkbox', { name: 'Automatically finish clear games' });
+    expect(autoFinish).not.toBeChecked(); fireEvent.click(autoFinish); expect(autoFinish).toBeChecked();
+    expect(localStorage.getItem('servitium.ludus.freecell.settings.v1')).toContain('true');
+    fireEvent.click(screen.getByRole('button', { name: 'Close dialog' }));
     vi.useFakeTimers(); const covered = screen.getAllByRole('button', { name: /, cascade 1/i })[0];
     fireEvent.pointerDown(covered, { pointerType: 'touch' }); act(() => vi.advanceTimersByTime(500));
     expect(covered).toHaveClass('peek'); fireEvent.pointerUp(covered, { pointerType: 'touch' }); fireEvent.click(covered);
