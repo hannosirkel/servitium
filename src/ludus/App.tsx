@@ -33,7 +33,7 @@ function Shelf({ openGame }: { openGame: (route: string) => void }) {
     <section className="shelf-intro"><span className="eyebrow">GAMES FOR A QUIET TABLE</span><h1>Ludus</h1><p>Time is your enemy, kill it here.</p></section>
     <section className="game-shelf" aria-label="Games">
       {GAME_CATALOGUE.map((game) => <article className="game-card" key={game.id}>
-        <div className="game-art" aria-hidden="true"><span>{game.mark}</span><i /><i /><i /></div>
+        <div className={`game-art ${game.id === 'freecell' ? 'freecell-art' : ''}`} aria-hidden="true"><span>{game.mark}</span><i /><i /><i /></div>
         <div><span className="status">AVAILABLE</span><h2>{game.title}</h2><p>{game.description}</p>
           <button className="primary" onClick={() => openGame(game.route)}>Play now <span aria-hidden="true">→</span></button></div>
       </article>)}

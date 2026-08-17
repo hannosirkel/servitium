@@ -33,8 +33,10 @@ describe('Ludus and Mahjong flow', () => {
     expect(screen.getAllByRole('button', { name: /cascade \d, destination/i })).toHaveLength(8);
     expect(screen.getAllByRole('button', { name: /free cell/i })).toHaveLength(4);
     expect(screen.getByRole('button', { name: /restart/i })).toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole('button', { name: /, cascade 1/i }).at(-1)!);
-    fireEvent.click(screen.getByRole('button', { name: 'Empty free cell 1' }));
+    const source = screen.getAllByRole('button', { name: /, cascade 1/i }).at(-1)!;
+    fireEvent.click(source); expect(source).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(source); expect(source).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.doubleClick(source);
     expect(screen.queryByRole('button', { name: 'Empty free cell 1' })).not.toBeInTheDocument();
     expect(localStorage.getItem('servitium.ludus.freecell.v1')).toContain('cascades');
   });

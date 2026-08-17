@@ -16,8 +16,12 @@ FreeCell is available at `/ludus/freecell`. It uses a deterministic standard
 52-card deal across eight face-up cascades, four free cells, four suit
 foundations, alternating-colour descending tableau runs, and capacity-correct
 supermoves. Select-source then select-destination interaction works with taps,
-clicks, and keyboard activation. Games persist locally with elapsed time,
-move history, unlimited Undo, exact progress recovery, Restart, and New Deal.
+clicks, and keyboard activation; selecting the same card again clears the
+selection, and double-clicking an exposed card moves it to the first available
+free cell. Game controls use the shared bottom action bar, cards and the shelf
+have game-specific artwork, and completion triggers a reduced-motion-safe
+celebration. Games persist locally with elapsed time, move history, unlimited
+Undo, exact progress recovery, Restart, and New Deal.
 
 The pure TypeScript engine models tile faces separately from layered slots.
 Free-tile checks use rectangle overlap across layers and same-layer side
