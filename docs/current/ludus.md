@@ -26,6 +26,9 @@ celebration. Games persist locally with elapsed time, move history, unlimited
 Undo, exact progress recovery, Restart, and New Deal.
 Overlapped tableau cards reveal fully on desktop hover and after a deliberate
 mobile long-press without also activating a move.
+When every exposed remaining card can advance directly to its foundation with
+no rearrangement, the engine proves the clean finish first and then animates the
+cards home one at a time.
 
 The pure TypeScript engine models tile faces separately from layered slots.
 Free-tile checks use rectangle overlap across layers and same-layer side

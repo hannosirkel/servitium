@@ -47,3 +47,5 @@ fieldset { border: 0; padding: 0; margin: 24px 0; }.difficulty-grid legend, .sty
 @media (prefers-reduced-motion: reduce) { .confetti i { animation: none; } }
 @media (hover: hover) and (pointer: fine) { .playing-card:hover { z-index:1100; transform:translateY(-2px); box-shadow:0 12px 30px #000b; } }
 .playing-card.peek { z-index:1100; transform:translateY(-2px); box-shadow:0 12px 30px #000b; }
+.auto-finishing .foundation span { animation:foundation-arrive .36s ease-in-out infinite alternate; }.auto-finishing .playing-card,.auto-finishing .card-slot { transition:transform .18s ease,opacity .18s ease; }.auto-finishing .freecell-top,.auto-finishing .cascades,.auto-finishing .freecell-controls{pointer-events:none}@keyframes foundation-arrive{to{transform:translateY(-5px) scale(1.04);filter:drop-shadow(0 8px 8px #d3ae6588)}}
+@media (prefers-reduced-motion: reduce) { .auto-finishing .foundation span { animation:none; } }

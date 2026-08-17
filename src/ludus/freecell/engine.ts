@@ -60,5 +60,26 @@ export function move(game: FreeCellGame, source: Source, destination: Destinatio
 }
 export function undo(game: FreeCellGame): FreeCellGame { const prior = game.history.at(-1); return prior ? { ...game, ...prior, history: game.history.slice(0, -1) } : game; }
 export const won = (game: FreeCellGame) => SUITS.every((suit) => game.foundations[suit].length === 13);
+export function autoFinishSteps(game: FreeCellGame): FreeCellGame[] | null {
+  if (won(game)) return null;
+  let current = game; const steps: FreeCellGame[] = [];
+  while (!won(current)) {
+    const sources: Source[] = [
+      ...current.cells.flatMap((card, index) => card ? [{ kind: 'cell', index } as Source] : []),
+      ...current.cascades.flatMap((column, index) => column.length ? [{ kind: 'cascade', index, cardIndex: column.length - 1 } as Source] : []),
+    ];
+    let next: FreeCellGame | null = null;
+    for (const source of sources) {
+      const card = source.kind === 'cell' ? current.cells[source.index]
+        : source.kind === 'cascade' ? current.cascades[source.index][source.cardIndex] : null;
+      if (!card) continue;
+      next = move(current, source, { kind: 'foundation', suit: card.suit });
+      if (next) break;
+    }
+    if (!next) return null;
+    current = next; steps.push(current);
+  }
+  return steps;
+}
 export const rankLabel = (rank: number) => ['','A','2','3','4','5','6','7','8','9','10','J','Q','K'][rank];
 export const suitMark: Record<Suit, string> = { clubs: '♣', diamonds: '♦', hearts: '♥', spades: '♠' };
