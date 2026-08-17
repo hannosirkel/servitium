@@ -17,8 +17,9 @@ Free-tile checks use rectangle overlap across layers and same-layer side
 blockers, including half-tile offsets. Generation is deterministic from the
 generator version, difficulty, layout, and seed. It first constructs a bounded
 legal slot-removal certificate, then assigns matching tile pairs to that
-sequence. Shuffling preserves occupied slots and the remaining tile multiset
-while constructing a new certificate.
+sequence. Certificate generation favours separated free slots, and repeated
+matching groups are dispersed across the board. Shuffling preserves occupied
+slots and the remaining tile multiset while constructing a new certificate.
 
 Hint, unlimited Undo, Shuffle, Restart, pinch-to-zoom, and Help are available.
 Explicit zoom and fit controls remain available on larger screens and are hidden

@@ -46,6 +46,24 @@ describe('solvable generator', () => {
     expect(signatures.size).toBeGreaterThan(20);
   });
 
+  it('disperses matching tiles across the larger boards', () => {
+    for (const layout of LAYOUTS.filter((item) => item.slots.length === 144)) {
+      let nearby = 0; let pairs = 0;
+      for (let seed = 0; seed < 24; seed += 1) {
+        const deal = generateDeal(layout.difficulty, layout.id, `dispersion-${seed}`);
+        for (let first = 0; first < layout.slots.length; first += 1) {
+          for (let second = first + 1; second < layout.slots.length; second += 1) {
+            if (!matches(tileAt(deal.assignment, layout.slots[first].id), tileAt(deal.assignment, layout.slots[second].id))) continue;
+            pairs += 1;
+            const a = layout.slots[first]; const b = layout.slots[second];
+            if (Math.abs(a.x - b.x) <= 2 && Math.abs(a.y - b.y) <= 2 && Math.abs(a.z - b.z) <= 1) nearby += 1;
+          }
+        }
+      }
+      expect(nearby / pairs).toBeLessThan(.08);
+    }
+  });
+
   it('starts with legal matches and produces a certificate-cleared shuffle', () => {
     const layout = LAYOUTS[0]; const deal = generateDeal('easy', layout.id, 'shuffle-source');
     expect(legalPairs(layout, new Set(layout.slots.map((slot) => slot.id)), deal.assignment).length).toBeGreaterThan(0);

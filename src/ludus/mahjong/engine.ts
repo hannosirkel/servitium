@@ -2,17 +2,18 @@ import { getLayout, type Difficulty, type Layout, type Slot } from './layouts';
 import { seededRandom, shuffled } from './random';
 import { TILE_DEFINITIONS, matches, tilePool, type TileDefinition } from './tiles';
 
-export const GENERATOR_VERSION = 1;
+export const GENERATOR_VERSION = 2;
 export type Assignment = Record<string, string>;
 export type CertificatePair = [string, string];
 export type Deal = {
-  generatorVersion: 1; difficulty: Difficulty; layoutId: string; seed: string;
+  generatorVersion: 2; difficulty: Difficulty; layoutId: string; seed: string;
   assignment: Assignment; certificate: CertificatePair[];
 };
 
 const overlaps = (a: Slot, b: Slot): boolean =>
   a.x < b.x + 2 && a.x + 2 > b.x && a.y < b.y + 2 && a.y + 2 > b.y;
 const sideOverlaps = (a: Slot, b: Slot): boolean => a.y < b.y + 2 && a.y + 2 > b.y;
+const distance = (a: Slot, b: Slot): number => Math.abs(a.x - b.x) + Math.abs(a.y - b.y) + Math.abs(a.z - b.z) * 2;
 
 export function isFree(slot: Slot, occupied: Set<string>, slots: Slot[]): boolean {
   if (!occupied.has(slot.id)) return false;
@@ -41,7 +42,8 @@ export function removalCertificate(layout: Layout, occupiedIds: string[], seed: 
     const highest = Math.max(...free.map((slot) => slot.z));
     const candidates = shuffled(free.flatMap((first, index) => free.slice(index + 1).map((second) => ({
       pair: [first.id, second.id] as CertificatePair,
-      priority: Number(first.z === highest && second.z === highest) * 2 + Number(first.z === second.z),
+      priority: (Number(first.z === highest && second.z === highest) * 2 + Number(first.z === second.z)) * 100
+        + distance(first, second),
     }))), random).sort((a, b) => b.priority - a.priority);
     for (const candidate of candidates) {
       const next = new Set(occupied); next.delete(candidate.pair[0]); next.delete(candidate.pair[1]);
@@ -66,17 +68,33 @@ function pairPool(tiles: TileDefinition[], seed: string): [TileDefinition, TileD
   return shuffled(pairs, seededRandom(`${seed}:faces`));
 }
 
+function assignPairs(layout: Layout, certificate: CertificatePair[], pairs: [TileDefinition, TileDefinition][]): Assignment {
+  const slots = new Map(layout.slots.map((slot) => [slot.id, slot]));
+  const remaining = [...pairs]; const assignedByGroup = new Map<string, Slot[]>(); const assignment: Assignment = {};
+  for (const [first, second] of certificate) {
+    const firstSlot = slots.get(first)!; const secondSlot = slots.get(second)!;
+    let bestIndex = 0; let bestScore = -1;
+    remaining.forEach((pair, index) => {
+      const previous = assignedByGroup.get(pair[0].matchGroup) ?? [];
+      const score = previous.length
+        ? Math.min(...previous.flatMap((slot) => [distance(firstSlot, slot), distance(secondSlot, slot)]))
+        : Number.POSITIVE_INFINITY;
+      if (score > bestScore) { bestIndex = index; bestScore = score; }
+    });
+    const pair = remaining.splice(bestIndex, 1)[0];
+    assignment[first] = pair[0].id; assignment[second] = pair[1].id;
+    assignedByGroup.set(pair[0].matchGroup, [...(assignedByGroup.get(pair[0].matchGroup) ?? []), firstSlot, secondSlot]);
+  }
+  return assignment;
+}
+
 export function generateDeal(difficulty: Difficulty, layoutId: string, seed: string): Deal {
   const layout = getLayout(layoutId);
   if (layout.difficulty !== difficulty) throw new Error('Layout does not match difficulty');
   const certificate = removalCertificate(layout, layout.slots.map((slot) => slot.id), seed);
   const pairs = pairPool(tilePool(layout.slots.length), seed);
   if (pairs.length !== certificate.length) throw new Error('Tile and slot counts differ');
-  const assignment: Assignment = {};
-  certificate.forEach(([first, second], index) => {
-    assignment[first] = pairs[index][0].id;
-    assignment[second] = pairs[index][1].id;
-  });
+  const assignment = assignPairs(layout, certificate, pairs);
   return { generatorVersion: GENERATOR_VERSION, difficulty, layoutId, seed, assignment, certificate };
 }
 
@@ -103,11 +121,7 @@ export function reshuffle(layout: Layout, occupiedIds: string[], assignment: Ass
   const certificate = removalCertificate(layout, occupiedIds, `${seed}:shuffle`);
   const remainingTiles = occupiedIds.map((id) => tileAt(assignment, id));
   const pairs = pairPool(remainingTiles, `${seed}:shuffle`);
-  const next = { ...assignment };
-  certificate.forEach(([first, second], index) => {
-    next[first] = pairs[index][0].id;
-    next[second] = pairs[index][1].id;
-  });
+  const next = { ...assignment, ...assignPairs(layout, certificate, pairs) };
   return { assignment: next, certificate };
 }
 
