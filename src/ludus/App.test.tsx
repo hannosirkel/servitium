@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import { GAME_KEY, saveGame } from './mahjong/persistence';
@@ -70,7 +70,7 @@ describe('Ludus and Mahjong flow', () => {
     expect(screen.getAllByRole('button', { name: /, (free|blocked)$/ })).toHaveLength(count as number);
   });
 
-  it('continues a saved board, removes a pair without refocusing, hints, undoes, and survives reload', () => {
+  it('continues a saved board, animates and removes a pair without refocusing, hints, undoes, and survives reload', async () => {
     const saved = createGame('easy', 'lotus-garden', 'component'); saveGame(localStorage, saved);
     history.replaceState({}, '', '/ludus/mahjong'); render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continue Easy/ }));
@@ -80,14 +80,15 @@ describe('Ludus and Mahjong flow', () => {
     const focus = vi.spyOn(HTMLElement.prototype, 'focus');
     fireEvent.click(document.querySelector(`[data-slot-id="${pair[0]}"]`)!);
     fireEvent.click(document.querySelector(`[data-slot-id="${pair[1]}"]`)!);
-    expect(screen.getByText('39 pairs')).toBeInTheDocument();
+    expect(document.querySelectorAll('.removing')).toHaveLength(2);
+    await waitFor(() => expect(screen.getByText('39 pairs')).toBeInTheDocument());
     expect(focus).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
     expect(screen.getByText('40 pairs')).toBeInTheDocument();
     expect(localStorage.getItem(GAME_KEY)).toContain('lotus-garden');
   });
 
-  it('supports keyboard activation and reaches completion', () => {
+  it('supports keyboard activation and reaches completion', async () => {
     const full = createGame('easy', 'open-gate', 'victory'); const pair = full.certificate.at(-1)!;
     const saved = { ...full, remaining: [...pair], pairsRemoved: 39 };
     saveGame(localStorage, saved); history.replaceState({}, '', '/ludus/mahjong'); render(<App />);
@@ -95,8 +96,18 @@ describe('Ludus and Mahjong flow', () => {
     const first = document.querySelector(`[data-slot-id="${pair[0]}"]`) as HTMLButtonElement;
     first.focus(); fireEvent.keyDown(first, { key: 'Enter' }); fireEvent.click(first);
     fireEvent.click(document.querySelector(`[data-slot-id="${pair[1]}"]`)!);
-    expect(screen.getByRole('heading', { name: /clean solve|table is clear/i })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('heading', { name: /clean solve|table is clear/i })).toBeInTheDocument());
     expect(screen.getByRole('button', { name: 'Replay this board' })).toBeInTheDocument();
+  });
+
+  it('shakes mismatched free tiles and requests haptic feedback', () => {
+    const vibrate = vi.fn(); Object.defineProperty(navigator, 'vibrate', { configurable: true, value: vibrate });
+    history.replaceState({}, '', '/ludus/mahjong'); render(<App />); fireEvent.click(screen.getByRole('button', { name: 'Start Easy' }));
+    const free = screen.getAllByRole('button', { name: /, free$/ });
+    const first = free[0]; const second = free.find((tile) => tile.getAttribute('aria-label')?.split(',')[0] !== first.getAttribute('aria-label')?.split(',')[0])!;
+    fireEvent.click(first); fireEvent.click(second);
+    expect(document.querySelectorAll('.mismatched')).toHaveLength(2);
+    expect(vibrate).toHaveBeenCalledWith([35, 25, 35]);
   });
 
   it('confirms restart and leaving a progressed game, and exposes board controls', () => {
