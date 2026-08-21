@@ -1,6 +1,45 @@
 # Servitium Agent Instructions
 
-This file guides coding agents working in this repository.
+<!-- BEGIN MANAGED ARCHITECTURE BASELINE -->
+<!-- Generated from hannosirkel/architecture. Do not edit inside these markers.
+     Regenerate with: tooling/universe sync-baseline servitium -->
+
+Governed by [`architecture`](https://github.com/hannosirkel/architecture).
+
+| | |
+| --- | --- |
+| Profile | `application-public` |
+| Visibility | declared public, currently public |
+| Public-safe required | yes |
+| Languages | typescript, shell |
+
+**Standards that apply here.** Read a standard before you change something it
+governs.
+
+- [Agent operation](https://github.com/hannosirkel/architecture/blob/main/standards/agent-operation.md) — worktrees, branches, multi-agent safety, delegation
+- [Security](https://github.com/hannosirkel/architecture/blob/main/standards/security.md) — secrets, public and private boundaries, workflow hardening
+- [Code quality](https://github.com/hannosirkel/architecture/blob/main/standards/code-quality.md) — gates, coaching, testing, review cutoff
+- [Repository contract](https://github.com/hannosirkel/architecture/blob/main/standards/repository-contract.md) — required files, profiles, skills
+- [GitOps and deployment](https://github.com/hannosirkel/architecture/blob/main/standards/gitops-and-deployment.md) — promotion by digest, rollback, the sanctioned secrets path
+- Language standards: [typescript](https://github.com/hannosirkel/architecture/blob/main/standards/languages/typescript.md), [shell](https://github.com/hannosirkel/architecture/blob/main/standards/languages/shell.md)
+
+**Never commit to a default branch.** Work in `~/app/.worktrees/servitium/<task>`,
+branch from `origin/main`, and open a pull request.
+
+**This repository must be safe to publish.** Never commit a password, token, key, kubeconfig,
+rendered Secret, or live export. No repository here holds a secret value, and a
+private one is no exception.
+
+**Run `habit-hooks` before declaring an edit done.** If it is not on `PATH`:
+
+```bash
+uv tool install "habit-hooks[python,typescript]"
+```
+
+Name every language in that one command. A later install naming a different
+extra silently replaces this one. Then re-run `habit-hooks`.
+
+<!-- END MANAGED ARCHITECTURE BASELINE -->
 
 ## Commands
 
@@ -9,41 +48,32 @@ npm ci
 bash scripts/validate
 ```
 
-Install dependencies separately, run focused tests while developing, then use
-the canonical validation command before handoff.
+Install dependencies separately from validation. Run `bash scripts/validate`
+before handoff.
 
 ## Workflow
 
-- Inspect Git status, relevant code, tests, and `docs/current/` before changes.
-- Develop on a feature branch from current `main`.
-- Keep the Node server dependency-light and frontend applications compatible
-  with the existing React, TypeScript, Vite, and Vitest stack.
-- Update the relevant `docs/current/` file in the same commit when behavior
-  changes. Add an ADR only for a durable, non-obvious choice.
-- Review the complete diff and outgoing history before push. Never bypass the
-  repository's pre-push secret scan.
-- Keep the tracked `.githooks/pre-commit` gitleaks scan enabled in provisioned
-  checkouts. Hook activation is managed by checkout provisioning; do not
-  replace it with an undocumented local Git configuration.
-- Push a reviewable branch and open a pull request. Test deployment uses the
-  `deploy-test` label; deployment and merge rules are documented outside this
-  repository in Mihkel's workspace.
+- Keep the Node server dependency-light. Keep the frontend applications on the
+  existing React, TypeScript, Vite, and Vitest stack.
+- The tracked `.githooks/pre-commit` gitleaks scan is activated by checkout
+  provisioning. Do not replace it with an undocumented local Git configuration.
+- Test deployment uses the `deploy-test` label on the pull request. Deployment
+  and merge rules are documented outside this repository, in Mihkel's
+  workspace.
 
 ## Documentation
 
-Durable documentation lives in [`docs/`](./docs/).
+[`docs/`](./docs/) follows the layout, the ADR format, and the exclusions in the
+[documentation standard](https://github.com/hannosirkel/architecture/blob/main/standards/documentation.md).
 
 | Path | Contents |
 |---|---|
-| [`docs/current/`](./docs/current/) | Source of truth for implemented behavior |
-| [`docs/decisions/`](./docs/decisions/) | Accepted architectural decisions |
-| [`docs/working/`](./docs/working/) | Active plans and designs |
-| [`docs/AGENTS.md`](./docs/AGENTS.md) | Documentation upkeep rules |
+| [`docs/current/`](./docs/current/) | implemented behavior |
+| [`docs/decisions/`](./docs/decisions/) | accepted architectural decisions |
+| [`docs/working/`](./docs/working/) | active plans and designs |
 
-Working documents may be committed to assist review. They are temporary intent,
-not current-state documentation. Absorb durable information into `current/` or
-`decisions/` after implementation, then remove completed working documents when
-requested or when the project workflow automates that lifecycle.
+Update the matching `docs/current/` file in the same commit when behavior
+changes.
 
 ## Architecture
 
@@ -70,16 +100,10 @@ local unless a requirement clearly justifies shared server state.
 
 ## Testing
 
-Prefer tests that protect user-visible behavior and non-obvious state
-transitions. Cover server routes, persistence recovery, destructive-action
-confirmation, responsive layout hooks, keyboard accessibility, and game-rule
-thresholds where applicable. Documentation-only changes need static checks;
-behavior changes require focused tests plus the repository validation suite.
+Cover server routes, persistence recovery, destructive-action confirmation,
+responsive layout hooks, keyboard accessibility, and game-rule thresholds.
 
 ## Review cutoff
 
-Must fix contradictions between documentation and code, unsafe server or
-storage behavior, broken recovery, inaccessible core controls, incorrect game
-rules, and missing information needed to operate or extend the service. Avoid
-historical narration, obvious code walkthroughs, and stylistic expansion that
-adds maintenance cost without preserving a decision.
+Must fix, beyond the central list: unsafe server or storage behavior, broken
+local recovery, an inaccessible core control, and an incorrect game rule.
