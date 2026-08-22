@@ -27,7 +27,8 @@ Undo, exact progress recovery, Restart, and New Deal.
 Overlapped tableau cards reveal fully on desktop hover and after a deliberate
 mobile long-press without also activating a move.
 FreeCell's Mahjong-style bottom action bar opens a settings dialog with an
-independently persisted automatic-finish preference. It is off by default.
+independently persisted automatic-finish preference. It is on by default and
+can be disabled.
 When enabled and every exposed remaining card can advance directly to its
 foundation with no rearrangement, the engine proves the clean finish first and
 then animates the cards home one at a time.

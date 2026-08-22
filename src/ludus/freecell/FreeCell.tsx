@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import FullscreenButton from '../../shared/FullscreenButton';
 import { autoFinishSteps, move, newGame, rankLabel, suitMark, SUITS, undo, won, type Destination, type FreeCellGame, type Source } from './engine';
 const KEY = 'servitium.ludus.freecell.v1';
-const SETTINGS_KEY = 'servitium.ludus.freecell.settings.v1';
+const SETTINGS_KEY = 'servitium.ludus.freecell.settings.v2';
 const load = (): FreeCellGame | null => { try { const value = JSON.parse(localStorage.getItem(KEY) ?? 'null'); return value?.version === 1 ? value : null; } catch { return null; } };
-const loadAutoFinish = () => { try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? 'null')?.autoFinish === true; } catch { return false; } };
+const loadAutoFinish = () => { try { const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? 'null'); return typeof saved?.autoFinish === 'boolean' ? saved.autoFinish : true; } catch { return true; } };
 const cardName = (card: { rank:number; suit:keyof typeof suitMark }) => `${rankLabel(card.rank)} of ${card.suit}`;
 export default function FreeCell({ onBack }: { onBack: () => void }) {
   const [game, setGame] = useState<FreeCellGame>(() => load() ?? newGame(String(Date.now()))); const [selected, setSelected] = useState<Source | null>(null); const [message, setMessage] = useState(''); const [help, setHelp] = useState(false); const [settingsOpen,setSettingsOpen]=useState(false); const [autoFinish,setAutoFinish]=useState(loadAutoFinish); const [peeked, setPeeked] = useState<string | null>(null);
