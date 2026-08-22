@@ -17,9 +17,10 @@ FreeCell is available at `/ludus/freecell`. It uses a deterministic standard
 foundations, alternating-colour descending tableau runs, and capacity-correct
 supermoves. Select-source then select-destination interaction works with taps,
 clicks, and keyboard activation; selecting the same card again clears the
-selection, and double-clicking an exposed card moves it to the first available
-free cell. Free-cell cards highlight when selected and double-click to a legal
-foundation; foundation top cards can return to free cells or cascades. Game
+selection, and double-clicking an exposed card moves it to its legal foundation
+or, when that is not possible, the first available free cell. Free-cell cards
+highlight when selected and double-click to a legal foundation; foundation top
+cards can return to free cells or cascades. Game
 controls use the shared bottom action bar, cards and the shelf
 have game-specific artwork, and completion triggers a reduced-motion-safe
 celebration. Games persist locally with elapsed time, move history, unlimited

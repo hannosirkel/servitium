@@ -63,6 +63,16 @@ describe('Ludus and Mahjong flow', () => {
     expect(screen.getByRole('button', { name: 'hearts foundation, A' })).toBeInTheDocument();
   });
 
+  it('double-clicks an exposed cascade card to its foundation before a free cell', () => {
+    const game = newFreeCellGame('cascade-foundation');
+    const ace = game.cascades.flat().find((card) => card.id === 'clubs-1')!;
+    game.cascades = game.cascades.map((column) => column.filter((card) => card.id !== ace.id)); game.cascades[0].push(ace);
+    localStorage.setItem('servitium.ludus.freecell.v1', JSON.stringify(game)); history.replaceState({}, '', '/ludus/freecell'); render(<App />);
+    fireEvent.doubleClick(screen.getByRole('button', { name: 'A of clubs, cascade 1' }));
+    expect(screen.getByRole('button', { name: 'clubs foundation, A' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Empty free cell 1' })).toBeInTheDocument();
+  });
+
   it.each([['Easy', 80], ['Medium', 144], ['Hard', 144]])('starts %s with the expected tile count', (difficulty, count) => {
     history.replaceState({}, '', '/ludus/mahjong'); render(<App />);
     fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${difficulty}`) }));
