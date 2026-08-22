@@ -27,8 +27,15 @@ describe('Ludus and Mahjong flow', () => {
   });
 
   it('routes the FreeCell catalogue entry into a complete deal', () => {
+    // Pin the deal. A fresh game is seeded from Date.now(), so the card at the
+    // bottom of cascade 1 differs every run: an ace goes to its foundation and
+    // leaves every free cell empty, which failed this test roughly once in
+    // twelve. Deal 'free-cell' puts the queen of spades there, so the only
+    // legal auto-move is into a cell, and the assertions below are exact.
+    localStorage.setItem('servitium.ludus.freecell.v1', JSON.stringify(newFreeCellGame('free-cell')));
     render(<App />);
     fireEvent.click(screen.getAllByRole('button', { name: /play now/i })[1]);
+    expect(screen.getByText(/Deal free-cel/)).toBeInTheDocument();
     expect(location.pathname).toBe('/ludus/freecell');
     expect(screen.getByText('FreeCell')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /cascade \d, destination/i })).toHaveLength(8);
@@ -47,8 +54,10 @@ describe('Ludus and Mahjong flow', () => {
     fireEvent.click(source); expect(source).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(source); expect(source).toHaveAttribute('aria-pressed', 'false');
     fireEvent.doubleClick(source);
+    // Q of spades cannot reach an empty foundation, so quickFoundationOrCell
+    // falls through to the first empty cell.
     expect(screen.queryByRole('button', { name: 'Empty free cell 1' })).not.toBeInTheDocument();
-    const occupiedCell = screen.getByRole('button', { name: /Free cell 1,/ });
+    const occupiedCell = screen.getByRole('button', { name: 'Free cell 1, Q of spades' });
     fireEvent.click(occupiedCell); expect(occupiedCell).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(occupiedCell); expect(occupiedCell).toHaveAttribute('aria-pressed', 'false');
     expect(localStorage.getItem('servitium.ludus.freecell.v1')).toContain('cascades');
