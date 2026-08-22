@@ -36,8 +36,8 @@ describe('Ludus and Mahjong flow', () => {
     expect(screen.getByRole('button', { name: /restart/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
     const autoFinish = screen.getByRole('checkbox', { name: 'Automatically finish clear games' });
-    expect(autoFinish).not.toBeChecked(); fireEvent.click(autoFinish); expect(autoFinish).toBeChecked();
-    expect(localStorage.getItem('servitium.ludus.freecell.settings.v1')).toContain('true');
+    expect(autoFinish).toBeChecked(); fireEvent.click(autoFinish); expect(autoFinish).not.toBeChecked();
+    expect(localStorage.getItem('servitium.ludus.freecell.settings.v2')).toContain('false');
     fireEvent.click(screen.getByRole('button', { name: 'Close dialog' }));
     vi.useFakeTimers(); const covered = screen.getAllByRole('button', { name: /, cascade 1/i })[0];
     fireEvent.pointerDown(covered, { pointerType: 'touch' }); act(() => vi.advanceTimersByTime(500));
@@ -61,6 +61,16 @@ describe('Ludus and Mahjong flow', () => {
     localStorage.setItem('servitium.ludus.freecell.v1', JSON.stringify(game)); history.replaceState({}, '', '/ludus/freecell'); render(<App />);
     fireEvent.doubleClick(screen.getByRole('button', { name: 'Free cell 1, A of hearts' }));
     expect(screen.getByRole('button', { name: 'hearts foundation, A' })).toBeInTheDocument();
+  });
+
+  it('double-clicks an exposed cascade card to its foundation before a free cell', () => {
+    const game = newFreeCellGame('cascade-foundation');
+    const ace = game.cascades.flat().find((card) => card.id === 'clubs-1')!;
+    game.cascades = game.cascades.map((column) => column.filter((card) => card.id !== ace.id)); game.cascades[0].push(ace);
+    localStorage.setItem('servitium.ludus.freecell.v1', JSON.stringify(game)); history.replaceState({}, '', '/ludus/freecell'); render(<App />);
+    fireEvent.doubleClick(screen.getByRole('button', { name: 'A of clubs, cascade 1' }));
+    expect(screen.getByRole('button', { name: 'clubs foundation, A' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Empty free cell 1' })).toBeInTheDocument();
   });
 
   it.each([['Easy', 80], ['Medium', 144], ['Hard', 144]])('starts %s with the expected tile count', (difficulty, count) => {
