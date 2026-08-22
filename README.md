@@ -36,3 +36,18 @@ not reinstall packages.
 Published test and live images carry minimum provenance and an OCI SBOM. Their
 immutable digest must pass the fixed-CRITICAL vulnerability gate before the
 corresponding GitOps promotion.
+
+## Repository boundaries
+
+This repository is public and must stay safe to publish.
+
+**It owns** the Node HTTP server and the frontend applications listed above, its
+own documentation in [`docs/`](./docs/), its tests, and the promotion of image
+digests into `hannosirkel/deploys`.
+
+**It does not own** the Kubernetes manifests, which `hannosirkel/deploys` owns,
+or any deployment credential, secret, or per-environment value.
+
+Repository-local current state and decisions live in [`docs/`](./docs/).
+Cross-repository standards and initiatives live in
+[`hannosirkel/architecture`](https://github.com/hannosirkel/architecture).
