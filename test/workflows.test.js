@@ -156,7 +156,7 @@ test('published images carry attestations and pass a digest scan before promotio
     assert.match(source, /--sbom=true/);
     assert.doesNotMatch(source, /--provenance=false/);
     assert.match(source,
-      /docker\/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c/);
+      /docker\/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e/);
     assert.match(source,
       /aquasecurity\/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25/);
     assert.match(source, /image-ref: ghcr\.io\/hannosirkel\/servitium@\$\{\{ steps\.build\.outputs\.digest \}\}/);
