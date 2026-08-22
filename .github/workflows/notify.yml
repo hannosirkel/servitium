@@ -2,6 +2,10 @@
 name: Notify Discord
 
 'on':
+  # zizmor: ignore[dangerous-triggers] reviewed design, not an oversight: this
+  # workflow checks nothing out and runs no repository code at all. It reads
+  # event metadata through `env:` and posts one Discord message, so neither
+  # trigger gives head-controlled content a path into a command.
   pull_request_target:
     branches:
       - main

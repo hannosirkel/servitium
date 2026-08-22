@@ -17,7 +17,7 @@ jobs:
       contents: read
     steps:
       - name: Check out the release revision
-        # actions/checkout v4.2.2
+        # actions/checkout v7.0.1
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.sha }}
@@ -40,11 +40,13 @@ jobs:
       guard: ${{ steps.guard.outputs.content }}
     steps:
       - name: Check out Servitium
-        # actions/checkout v4.2.2
+        # actions/checkout v7.0.1
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
 
       - name: Set up the attestation-capable Buildx driver
-        # docker/setup-buildx-action v3
+        # docker/setup-buildx-action v4.2.0
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c
 
       - name: Authenticate to GHCR
@@ -86,7 +88,7 @@ jobs:
 
       - name: Retain the vulnerability report
         if: ${{ always() && hashFiles('trivy-results.json') != '' }}
-        # actions/upload-artifact v4.6.2
+        # actions/upload-artifact v7.0.1
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: trivy-live-${{ github.sha }}
@@ -153,7 +155,7 @@ jobs:
           echo "token=$token" >>"$GITHUB_OUTPUT"
 
       - name: Check out only Servitium GitOps state
-        # actions/checkout v4.2.2
+        # actions/checkout v7.0.1
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: hannosirkel/deploys

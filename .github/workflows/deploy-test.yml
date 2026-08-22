@@ -2,6 +2,10 @@
 name: Deploy Test
 
 'on':
+  # zizmor: ignore[dangerous-triggers] reviewed design, not an oversight: the
+  # `gate` job verifies trusted pull-request metadata before any later job
+  # checks out the head revision, and that checkout is by pinned SHA. This is
+  # the pre-authorised exception in `standards/security.md`.
   pull_request_target:
     branches:
       - main
@@ -10,6 +14,10 @@ name: Deploy Test
 concurrency:
   group: servitium-gitops-promotion
   cancel-in-progress: false
+
+# Nothing by default. Every job below grants itself exactly what it needs, and
+# a job added later inherits nothing rather than the repository default.
+permissions: {}
 
 jobs:
   gate:
@@ -110,14 +118,14 @@ jobs:
       PR_NUMBER: ${{ needs.gate.outputs.pr_number }}
     steps:
       - name: Check out the validated revision
-        # actions/checkout v4.2.2
+        # actions/checkout v7.0.1
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs.gate.outputs.head_sha }}
           persist-credentials: false
 
       - name: Set up the attestation-capable Buildx driver
-        # docker/setup-buildx-action v3
+        # docker/setup-buildx-action v4.2.0
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c
 
       - name: Authenticate to GHCR
@@ -159,7 +167,7 @@ jobs:
 
       - name: Retain the vulnerability report
         if: ${{ always() && hashFiles('trivy-results.json') != '' }}
-        # actions/upload-artifact v4.6.2
+        # actions/upload-artifact v7.0.1
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: trivy-test-${{ needs.gate.outputs.head_sha }}
@@ -248,7 +256,7 @@ jobs:
           echo "token=$token" >>"$GITHUB_OUTPUT"
 
       - name: Check out only Servitium GitOps state
-        # actions/checkout v4.2.2
+        # actions/checkout v7.0.1
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: hannosirkel/deploys

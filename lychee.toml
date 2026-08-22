@@ -1,0 +1,31 @@
+# Link checking for this repository's Markdown.
+#
+# Internal links are checked strictly. External links are checked except where
+# the answer would be meaningless, and each exclusion below says why.
+#
+# **Scoped to Markdown deliberately.** The HTML entrypoints and the CSS under
+# `src/` reference their assets root-relative -- `/favicon.svg`,
+# `/assets/fantasy-overlord.png` -- which Vite resolves at build time and the
+# server resolves from its document root. No single filesystem root reproduces
+# either, so an anonymous file checker can only report false failures on them.
+
+exclude_path = [
+  "node_modules",
+  "dist",
+]
+
+exclude = [
+  # Five repositories in this universe are private. An anonymous checker gets
+  # 404 for a private repository that exists, which is a false failure rather
+  # than a finding. Narrowed to exactly those five: every other
+  # `hannosirkel/*` link, including every standards link the generated
+  # `AGENTS.md` baseline carries, is checked for real.
+  "^https://github\\.com/hannosirkel/(architecture|orange|orange-inventory|myskills|entpass)(/|$)",
+]
+
+# GitHub rate-limits anonymous requests hard enough to make a run flaky.
+max_concurrency = 4
+max_retries = 2
+timeout = 20
+
+accept = ["200", "204", "206", "429"]

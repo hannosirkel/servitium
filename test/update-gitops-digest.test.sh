@@ -14,6 +14,10 @@ inode_of() {
 }
 
 metadata_of() {
+  # Baselined pre-existing finding, not a fix. The single quotes hold
+  # JavaScript for `node -e`, where a backtick template literal is the
+  # program's own syntax and must not be expanded by the shell.
+  # shellcheck disable=SC2016
   node -e 'const stat = require("node:fs").statSync(process.argv[1]); process.stdout.write(`${stat.mode & 0o7777}:${stat.uid}:${stat.gid}`)' "$1"
 }
 
@@ -64,6 +68,10 @@ write_fixture "$race"
 race_bin="$test_root/race-bin"
 mkdir "$race_bin"
 real_node="$(command -v node)"
+# Baselined pre-existing findings, not a fix. Every quoted line below is the
+# source text of a stub script being written to disk; expanding any of it here
+# would substitute this shell's variables into the stub instead of the stub's.
+# shellcheck disable=SC2016
 printf '%s\n' \
   '#!/bin/sh' \
   'if [ "${1:-}" = "-" ]; then' \
@@ -218,6 +226,8 @@ rollback_original="$test_root/rollback-original.yaml"
 cp "$rollback/servitium/overlays/test/kustomization.yaml" "$rollback_original"
 test_bin="$test_root/test-bin"
 mkdir "$test_bin"
+# Baselined pre-existing findings, not a fix. Stub script source text, as above.
+# shellcheck disable=SC2016
 printf '%s\n' \
   '#!/bin/sh' \
   'if [ "${1:-}" = "-C" ] && [ "${3:-}" = "diff" ] && [ "${4:-}" = "--name-only" ]; then' \
@@ -244,6 +254,8 @@ directory_replacement="$test_root/directory-replacement"
 write_fixture "$directory_replacement"
 directory_test_bin="$test_root/directory-test-bin"
 mkdir "$directory_test_bin"
+# Baselined pre-existing findings, not a fix. Stub script source text, as above.
+# shellcheck disable=SC2016
 printf '%s\n' \
   '#!/bin/sh' \
   'if [ "${1:-}" = "-C" ] && [ "${3:-}" = "diff" ] && [ "${4:-}" = "--name-only" ]; then' \
