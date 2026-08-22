@@ -1,0 +1,33 @@
+{
+  // Layout checking for this repository's Markdown.
+  //
+  // The gate blocks on new work only. Two rules fire on the documentation that
+  // exists today and are disabled here as a recorded baseline rather than
+  // fixed -- 7 MD013 and 4 MD060 findings at the time this landed, every one
+  // of them in `AGENTS.md`.
+  "config": {
+    "default": true,
+
+    // 7 findings. Prose wraps where the writer wrapped it, and a table row or
+    // a pinned action SHA cannot wrap at all: enforcing 80 columns would mean
+    // either a broken table or a truncated SHA.
+    "MD013": false,
+
+    // 4 findings, all in the managed section of `AGENTS.md`, which is
+    // generated from `hannosirkel/architecture` and must not be hand-edited
+    // here. Its two-column table has empty header cells, so its pipes sit
+    // adjacent and no cell-spacing style can be satisfied without editing
+    // generated content.
+    "MD060": false,
+
+    // Decision records repeat section headings across documents. Duplicates
+    // within one document still fail.
+    "MD024": { "siblings_only": true }
+  },
+  "globs": ["**/*.md"],
+  "ignores": [
+    "node_modules/**",
+    "**/node_modules/**",
+    "dist/**"
+  ]
+}

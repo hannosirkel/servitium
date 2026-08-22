@@ -51,6 +51,25 @@ bash scripts/validate
 Install dependencies separately from validation. Run `bash scripts/validate`
 before handoff.
 
+`scripts/validate` runs `shellcheck` over every shell file `git ls-files`
+reports; pre-existing findings are baselined in place with narrow
+`# shellcheck disable=SCxxxx` directives.
+
+## Local exceptions
+
+**No ESLint gate: `typescript-eslint` does not accept TypeScript 7.** The
+[TypeScript standard](https://github.com/hannosirkel/architecture/blob/main/standards/languages/typescript.md)
+makes `eslint` the gate here, and this repository cannot install one:
+`typescript@7.0.2` against every published `typescript-eslint` — `8.67.0` on
+`latest`, `8.67.1-alpha.25` on `canary` — declaring
+`peerDependencies.typescript: ">=4.8.4 <6.1.0"`, so
+`npm install --save-dev eslint typescript-eslint` ends in `ERESOLVE`.
+`--legacy-peer-deps` would install a parser that does not support this
+compiler: a broken gate rather than a gate. Re-check with
+`npm view typescript-eslint peerDependencies`; when the range admits 7.x, add a
+minimal flat config, wire `eslint` into `scripts/validate`, and baseline with a
+bulk suppressions file.
+
 ## Workflow
 
 - Keep the Node server dependency-light. Keep the frontend applications on the

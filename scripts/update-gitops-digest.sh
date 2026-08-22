@@ -25,6 +25,10 @@ if ! printf '%s' "$digest" | grep -Eq '^sha256:[0-9a-f]{64}$'; then
   exit 1
 fi
 
+# Baselined pre-existing finding, not a fix. `CDPATH=` is a deliberate empty
+# assignment scoped to this one `cd`, which is how a `cd` is made to ignore an
+# inherited CDPATH at all.
+# shellcheck disable=SC1007
 if ! overlay="$(CDPATH= cd "$overlay_input" && pwd -P)"; then
   echo 'digest update rejected: overlay is unavailable' >&2
   exit 1
@@ -33,6 +37,8 @@ if ! repository="$(git -C "$overlay" rev-parse --show-toplevel 2>/dev/null)"; th
   echo 'digest update rejected: overlay is not in a Git worktree' >&2
   exit 1
 fi
+# Baselined pre-existing finding, not a fix. Same deliberate `CDPATH=` prefix.
+# shellcheck disable=SC1007
 repository="$(CDPATH= cd "$repository" && pwd -P)"
 case "$overlay" in
   "$repository"/*) relative_overlay="${overlay#"$repository"/}" ;;
@@ -89,6 +95,10 @@ if ! original_inode="$(node -e 'process.stdout.write(String(require("node:fs").s
   echo 'digest update rejected: could not inspect kustomization snapshot' >&2
   exit 1
 fi
+# Baselined pre-existing finding, not a fix. The single quotes hold JavaScript
+# for `node -e`, where a backtick template literal is the program's own syntax
+# and must not be expanded by the shell.
+# shellcheck disable=SC2016
 if ! original_metadata="$(node -e 'const stat = require("node:fs").statSync(process.argv[1]); process.stdout.write(`${stat.mode & 0o7777}:${stat.uid}:${stat.gid}`)' "$kustomization")"; then
   rm -f "$original" "$verification"
   echo 'digest update rejected: could not inspect kustomization metadata' >&2
@@ -125,6 +135,8 @@ target_matches_original() {
   if [ "$current_link_count" != "$link_count" ]; then
     return 1
   fi
+  # Baselined pre-existing finding, not a fix. Same `node -e` program as above.
+  # shellcheck disable=SC2016
   if ! current_metadata="$(node -e 'const stat = require("node:fs").statSync(process.argv[1]); process.stdout.write(`${stat.mode & 0o7777}:${stat.uid}:${stat.gid}`)' "$kustomization")"; then
     return 1
   fi
