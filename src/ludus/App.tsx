@@ -12,6 +12,7 @@ import { hashSeed } from './mahjong/random';
 import {
   availablePairs, createGame, hint, restart, selectTile, shuffleGame, undo, type MahjongGame,
 } from './mahjong/state';
+import TileFace from './mahjong/TileFace';
 
 type Route = 'shelf' | 'mahjong' | 'freecell';
 type DialogName = 'help' | 'settings' | 'statistics' | null;
@@ -70,9 +71,9 @@ function StartScreen({ saved, onContinue, onStart, onDaily, onBack, openDialog }
   </main>;
 }
 
-function Board({ game, settings, zoom, hintPair, onTile, onZoom }: {
+function Board({ game, settings, zoom, hintPair, removing, mismatched, onTile, onZoom, onFit }: {
   game: MahjongGame; settings: Settings; zoom: number; hintPair: string[]; onTile: (id: string) => void;
-  onZoom: (zoom: number) => void;
+  removing: string[]; mismatched: string[]; onZoom: (zoom: number) => void; onFit: (zoom: number) => void;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
@@ -82,6 +83,17 @@ function Board({ game, settings, zoom, hintPair, onTile, onZoom }: {
   const free = new Set(freeSlots(layout, occupied).map((slot) => slot.id));
   const maxX = Math.max(...layout.slots.map((slot) => slot.x)) + 2; const maxY = Math.max(...layout.slots.map((slot) => slot.y)) + 2;
   const unitX = 31 * zoom; const unitY = 38 * zoom; const layer = 5 * zoom;
+  useEffect(() => {
+    if (!settings.autoFit) return;
+    const viewport = viewportRef.current;
+    const fit = () => {
+      if (!viewport) return;
+      const naturalWidth = maxX * 31 + 80; const naturalHeight = maxY * 38 + 90;
+      onFit(Math.min(1, Math.max(.36, Math.min((viewport.clientWidth - 12) / naturalWidth, (viewport.clientHeight - 12) / naturalHeight))));
+    };
+    fit(); const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(fit); observer?.observe(viewport!);
+    return () => observer?.disconnect();
+  }, [game.layoutId, settings.autoFit]);
   const beginPinch = () => {
     const viewport = viewportRef.current; const points = [...pointers.current.values()];
     if (!viewport || points.length !== 2) return;
@@ -103,7 +115,7 @@ function Board({ game, settings, zoom, hintPair, onTile, onZoom }: {
     event.preventDefault(); suppressClick.current = true;
     const midpoint = { x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 };
     const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
-    const next = Math.min(1.5, Math.max(.55, active.zoom * distance / active.distance));
+    const next = Math.min(1.5, Math.max(.36, active.zoom * distance / active.distance));
     onZoom(next);
     requestAnimationFrame(() => {
       viewport.scrollLeft = active.contentX * next - midpoint.x;
@@ -125,32 +137,36 @@ function Board({ game, settings, zoom, hintPair, onTile, onZoom }: {
       const label = `${tile.label}, ${isFree ? 'free' : 'blocked'}`;
       return <button key={slot.id} type="button"
         data-slot-id={slot.id}
-        className={`mahjong-tile family-${tile.family}${isFree && settings.highlightFree ? ' free' : ''}${selected ? ' selected' : ''}${hinted ? ' hinted' : ''}`}
+        className={`mahjong-tile family-${tile.family}${isFree && settings.highlightFree ? ' free' : ''}${selected ? ' selected' : ''}${hinted ? ' hinted' : ''}${removing.includes(slot.id) ? ' removing' : ''}${mismatched.includes(slot.id) ? ' mismatched' : ''}`}
         style={{ left: slot.x * unitX + slot.z * layer, top: slot.y * unitY - slot.z * layer, width: 60 * zoom, height: 74 * zoom, zIndex: slot.z * 100 + Math.round(slot.y) }}
-        aria-label={label} disabled={!isFree} tabIndex={isFree ? 0 : -1} onClick={() => onTile(slot.id)}>
-        <span className="tile-face"><strong>{settings.tileStyle === 'clear' ? clearFace(tile.id) : tile.face}</strong><small>{settings.tileStyle === 'clear' ? clearSuit(tile.id) : tile.family}</small></span>
+        aria-label={label} disabled={!isFree || removing.length > 0} tabIndex={isFree ? 0 : -1} onClick={() => onTile(slot.id)}>
+        <TileFace tile={tile} clear={settings.tileStyle === 'clear'} />
       </button>;
     })}
   </div></div>;
 }
 
-function clearFace(id: string): string { const part = id.split('-')[1]; return /^\d+$/.test(part) ? part : part.slice(0, 1).toUpperCase(); }
-function clearSuit(id: string): string { return id.split('-')[0].toUpperCase(); }
-
 function GameScreen({ game, setGame, settings, onNew, onBack, openDialog, onComplete }: {
   game: MahjongGame; setGame: (game: MahjongGame) => void; settings: Settings; onNew: () => void; onBack: () => void;
   openDialog: (dialog: Exclude<DialogName, null>) => void; onComplete: (game: MahjongGame) => void;
 }) {
-  const [zoom, setZoom] = useState(settings.autoFit ? .72 : 1); const [hintPair, setHintPair] = useState<string[]>([]); const [announcement, setAnnouncement] = useState('');
+  const [zoom, setZoom] = useState(settings.autoFit ? .72 : 1); const [hintPair, setHintPair] = useState<string[]>([]); const [removing, setRemoving] = useState<string[]>([]); const [mismatched, setMismatched] = useState<string[]>([]); const [announcement, setAnnouncement] = useState('');
   const pairs = availablePairs(game); const deadEnd = game.remaining.length > 0 && pairs.length === 0;
   const act = (id: string) => {
-    const result = selectTile(game, id); setGame(result.game);
+    if (removing.length) return;
+    const previous = game.selectedId; const result = selectTile(game, id);
     const messages = { selected: `${tileAt(game.assignment, id).label} selected`, mismatch: 'Tiles do not match', blocked: 'That tile is blocked', removed: `Pair removed. ${result.game.remaining.length / 2} pairs remain`, won: 'Board cleared' };
     setAnnouncement(messages[result.event]);
     if (result.event === 'removed' || result.event === 'won') {
-      if (settings.sound) playTone(520, .035); setHintPair([]);
+      setRemoving(previous ? [previous, id] : [id]); if (settings.sound) playTone(520, .035); setHintPair([]);
+      setTimeout(() => { setRemoving([]); setGame(result.game); if (result.event === 'won') onComplete(result.game); }, 280);
+      return;
     }
-    if (result.event === 'won') onComplete(result.game);
+    setGame(result.game);
+    if (result.event === 'mismatch') {
+      setMismatched(previous ? [previous, id] : [id]); navigator.vibrate?.([35, 25, 35]);
+      setTimeout(() => setMismatched([]), 320);
+    }
   };
   const doHint = () => { const result = hint(game); setGame(result.game); setHintPair(result.pair ?? []); setAnnouncement(result.pair ? 'A matching pair is highlighted' : 'No free matches'); };
   const doShuffle = () => { if (!deadEnd && !confirm('Shuffle while moves remain? This changes the puzzle.')) return; setGame(shuffleGame(game)); setHintPair([]); setAnnouncement('Remaining tiles shuffled'); };
@@ -159,7 +175,7 @@ function GameScreen({ game, setGame, settings, onNew, onBack, openDialog, onComp
     <section className="game-hud"><div><span>{difficultyCopy[game.difficulty].title}</span><b>{getLayout(game.layoutId).name}</b></div>
       <div><span>Remaining</span><b>{game.remaining.length / 2} pairs</b></div>{settings.showTimer && <div><span>Active time</span><b>{formatTime(game.elapsedMs)}</b></div>}</section>
     {deadEnd && <div className="no-moves" role="status"><b>No free matches</b><span>Your board is safe. Undo or reshuffle the remaining tiles.</span><button onClick={() => setGame(undo(game))} disabled={!game.history.length}>Undo</button><button onClick={doShuffle}>Shuffle</button></div>}
-    <Board game={game} settings={settings} zoom={zoom} hintPair={hintPair} onTile={act} onZoom={setZoom} />
+    <Board game={game} settings={settings} zoom={zoom} hintPair={hintPair} removing={removing} mismatched={mismatched} onTile={act} onZoom={setZoom} onFit={setZoom} />
     <nav className="game-controls" aria-label="Mahjong controls">
       <button onClick={() => setGame(undo(game))} disabled={!game.history.length} aria-label="Undo"><span>↶</span><small>Undo</small></button>
       <button onClick={doHint} disabled={!pairs.length} aria-label="Hint"><span>◇</span><small>Hint</small></button>
@@ -169,7 +185,7 @@ function GameScreen({ game, setGame, settings, onNew, onBack, openDialog, onComp
       <button onClick={doRestart} aria-label="Restart"><span>↺</span><small>Restart</small></button>
       <button onClick={onNew} aria-label="New game"><span>＋</span><small>New</small></button>
     </nav>
-    <div className="zoom-controls" aria-label="Board zoom"><button aria-label="Zoom out" onClick={() => setZoom((value) => Math.max(.55, value - .1))}>−</button><button aria-label="Fit board" onClick={() => setZoom(.72)}>Fit</button><button aria-label="Zoom in" onClick={() => setZoom((value) => Math.min(1.5, value + .1))}>＋</button></div>
+    <div className="zoom-controls" aria-label="Board zoom"><button aria-label="Zoom out" onClick={() => setZoom((value) => Math.max(.36, value - .1))}>−</button><button aria-label="Fit board" onClick={() => setZoom(.72)}>Fit</button><button aria-label="Zoom in" onClick={() => setZoom((value) => Math.min(1.5, value + .1))}>＋</button></div>
     <div className="sr-only" aria-live="polite">{announcement}</div>
   </main>;
 }

@@ -47,9 +47,15 @@ remaining tile multiset while constructing a new certificate.
 Hint, unlimited Undo, Shuffle, Restart, pinch-to-zoom, and Help are available.
 Explicit zoom and fit controls remain available on larger screens and are hidden
 on mobile, where pinch zoom is available.
+Traditional tiles use Japanese riichi-style kanji, pinzu, sōzu, honor, and
+blank white-dragon faces in a carved red, green, and deep-blue palette. Matching
+tiles lift and dissolve before removal. A mismatched choice shakes both tiles
+and requests a short vibration from supporting devices.
 Blocked tiles are disabled; free tiles are keyboard-operable native buttons
 with descriptive labels. Status changes use a polite live region. The board
-uses native one-finger panning when it exceeds the viewport, keeps the board
+initially fits both dimensions into the available portrait-mobile play area,
+which uses a compact HUD and two-row action bar. It uses native one-finger
+panning when it exceeds the viewport, keeps the board
 point between two fingers stable while pinching, preserves the viewport after
 tile removal, and honours reduced-motion preferences.
 
